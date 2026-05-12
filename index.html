@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>公出管理系統-自定義成員版</title>
+    <title>南方實作基地TRIP快手</title>
     <style>
         :root { --primary: #2563eb; --bg: #f1f5f9; --success: #059669; --sidebar: #1e293b; }
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
@@ -142,7 +142,7 @@
 
     function loadCurrentUserData() {
         const raw = localStorage.getItem('tripData_' + currentUserID);
-        currentUserData = raw ? JSON.parse(raw) : { history: [], locations: [{ name: '基地', addr: '台南市新營區大同路32號' }, { name: '雲嘉南分署', addr: '台南市官田區工業路40號' }] };
+        currentUserData = raw ? JSON.parse(raw) : { history: [], locations: [{ name: '南方實作基地', addr: '台南市新營區大同路32號' }, { name: '勞動部勞動力發展署雲嘉南分署', addr: '台南市官田區工業路40號' }] };
     }
 
     function saveCurrentUserData() { localStorage.setItem('tripData_' + currentUserID, JSON.stringify(currentUserData)); }
