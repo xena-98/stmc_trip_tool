@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公出管理系統-自定義成員版</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f1f5f9; --success: #059669; --sidebar: #1e293b; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
+        
+        .sidebar { width: 280px; background: var(--sidebar); color: white; display: flex; flex-direction: column; border-right: 1px solid #e2e8f0; }
+        .sidebar-header { padding: 20px; background: #0f172a; border-bottom: 1px solid #334155; }
+        .user-mgmt-box { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .user-selector { width: 100%; padding: 8px; background: #334155; color: white; border: 1px solid #475569; border-radius: 4px; cursor: pointer; }
+        .mgmt-btns { display: flex; gap: 5px; margin-top: 5px; }
+        .btn-mgmt { flex: 1; padding: 4px; font-size: 11px; background: #475569; color: #cbd5e1; border: none; border-radius: 3px; cursor: pointer; }
+
+        .history-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .history-item { background: #334155; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; position: relative; border-left: 4px solid transparent; text-align: center; }
+        .history-item.active { background: #1e293b; border-left-color: var(--primary); font-weight: bold; }
+        .btn-del-mini { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #94a3b8; background: none; border: none; font-size: 18px; cursor: pointer; }
+
+        .main-content { flex: 1; overflow-y: auto; padding: 30px; box-sizing: border-box; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h2 { color: #1e293b; border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-top: 0; }
+        .section { margin-bottom: 15px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #475569; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
+        
+        .quick-dest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .btn-tag { 
+            background: #e2e8f0; color: #475569; padding: 0; border-radius: 20px; 
+            font-size: 12px; cursor: pointer; border: 1px solid #cbd5e1; display: flex; overflow: hidden;
+        }
+        .tag-main { padding: 4px 8px 4px 12px; }
+        .tag-main:hover { background: #cbd5e1; }
+        .tag-to-start { background: #cbd5e1; padding: 4px 8px; border-left: 1px solid #94a3b8; font-weight: bold; }
+        .tag-to-start:hover { background: var(--primary); color: white; }
+        .del-tag { padding: 4px 8px; color: #ef4444; font-weight: bold; border-left: 1px solid #cbd5e1; }
+        .del-tag:hover { background: #fee2e2; }
+        
+        .admin-toggle { font-size: 0.85em; color: var(--primary); cursor: pointer; text-decoration: underline; margin: 10px 0; display: inline-block; }
+        .admin-box { background: #f8fafc; padding: 10px; border-radius: 6px; display: none; margin-bottom: 15px; border: 1px solid #cbd5e1; }
+        .time-group { display: flex; align-items: center; gap: 4px; }
+        .time-group select { width: 70px; }
+        
+        button { cursor: pointer; border: none; border-radius: 4px; padding: 10px 15px; font-weight: bold; transition: 0.2s; }
+        .btn-map { background: var(--success); color: white; width: 100%; margin-top: 10px; }
+        .btn-gen { background: var(--primary); color: white; width: 100%; font-size: 1.1em; margin-top: 20px; }
+        .btn-submit { background: #8b5cf6; color: white; width: 100%; margin-top: 10px; font-size: 1.1em; }
+        #output { width: 100%; height: 200px; background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px dashed #94a3b8; font-family: monospace; box-sizing: border-box; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <div class="sidebar-header">
+        <label style="color: #94a3b8; font-size: 0.85em;">👤 成員管理</label>
+        <div class="user-mgmt-box">
+            <select id="userDropdown" class="user-selector" onchange="switchUser()"></select>
+            <div class="mgmt-btns">
+                <button class="btn-mgmt" onclick="renameUser()">✏️ 改名</button>
+                <button class="btn-mgmt" onclick="addNewUser()">➕ 新增</button>
+                <button class="btn-mgmt" onclick="deleteUser()" style="color:#f87171;">🗑️ 刪除</button>
+            </div>
+        </div>
+        <p style="margin-top:20px; font-weight:bold; font-size:1.1em;">📅 歷史出差日期</p>
+    </div>
+    <div class="history-list" id="historyList"></div>
+</div>
+
+<div class="main-content">
+    <div class="container">
+        <h2 id="mainTitle">🚀 公出快速產生器</h2>
+
+        <div class="section">
+            <label>活動名稱</label>
+            <select id="tripType" onchange="toggleMonthInput()">
+                <option value="辦理工作坊課程">辦理工作坊課程</option>
+                <option value="辦理專案展售">辦理專案展售</option>
+                <option value="辦理講座課程">辦理講座課程</option>
+                <option value="辦理企業參訪">辦理企業參訪</option>
+                <option value="辦理聯繫會議">辦理 ( ) 月聯繫會議</option>
+                <option value="custom">其他（自行輸入）</option>
+            </select>
+            <div id="monthDiv" style="display:none; margin-top:10px;"><input type="number" id="monthInput" placeholder="月份" style="width: 80px;"> 月</div>
+            <input type="text" id="customTrip" placeholder="輸入活動名稱" style="display:none; margin-top:10px;">
+        </div>
+
+        <div class="section">
+            <label>活動日期</label>
+            <input type="text" id="dateStr" placeholder="115/1/1" onblur="formatDateWithDay(this)">
+            <div class="grid" style="margin-top:15px;">
+                <div><label>活動時間</label><div class="time-group"><select id="actS_H"></select>:<select id="actS_M"></select> ~ <select id="actE_H"></select>:<select id="actE_M"></select></div></div>
+                <div><label>出差時間</label><div class="time-group"><select id="tripS_H"></select>:<select id="tripS_M"></select> ~ <select id="tripE_H"></select>:<select id="tripE_M"></select></div><label style="font-weight:normal; margin-top: 5px;"><input type="checkbox" id="minusLunch"> 包含午休(1h)</label></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <label>起點設定</label>
+            <input type="text" id="startPoint" placeholder="點選下方標籤右側 📍 可帶入起點" oninput="smartFormatDest(this)">
+
+            <label style="margin-top:15px;">目的地</label>
+            <input id="destInput" placeholder="貼上地址或點選下方標籤文字" oninput="smartFormatDest(this)">
+            
+            <div class="quick-dest" id="quickDestContainer"></div>
+
+            <span class="admin-toggle" onclick="toggleAdmin()">⚙️ 管理個人常用地點</span>
+            <div id="adminBox" class="admin-box">
+                <div style="display:flex; gap:5px;"><input type="text" id="newPlaceName" placeholder="地名" style="flex:1;"><input type="text" id="newPlaceAddr" placeholder="地址" style="flex:2;"><button style="background:#1e293b; color:white;" onclick="addLocation()">新增</button></div>
+            </div>
+
+            <button class="btn-map" onclick="openGoogleMaps()">📍 開啟 Google Maps 查里程</button>
+            <div class="grid" style="margin-top:15px;">
+                <div><label>單程公里數</label><input type="number" id="km" step="0.1" placeholder="KM"></div>
+                <div><label>單程分鐘</label><input type="text" id="driveTime" placeholder="分鐘"></div>
+            </div>
+        </div>
+
+        <button class="btn-gen" onclick="generate()">⚡ 1. 產生預覽內容</button>
+        <textarea id="output" placeholder="預覽內容將顯示於此..."></textarea>
+        <button class="btn-submit" onclick="submitToHistory()">💾 2. 送出並存入歷史紀錄</button>
+    </div>
+</div>
+
+<script>
+    let globalUsers = JSON.parse(localStorage.getItem('trip_UserList')) || [{ id: 'user_' + Date.now(), name: '管理員' }];
+    let currentUserID = localStorage.getItem('trip_LastUserID') || globalUsers[0].id;
+    let currentUserData = {};
+    let currentEditIndex = null;
+
+    function switchUser() {
+        currentUserID = document.getElementById('userDropdown').value;
+        localStorage.setItem('trip_LastUserID', currentUserID);
+        loadCurrentUserData();
+        renderUserDropdown();
+        renderHistory();
+        renderLocations();
+        updateTitle();
+    }
+
+    function loadCurrentUserData() {
+        const raw = localStorage.getItem('tripData_' + currentUserID);
+        currentUserData = raw ? JSON.parse(raw) : { history: [], locations: [{ name: '基地', addr: '台南市新營區大同路32號' }, { name: '雲嘉南分署', addr: '台南市官田區工業路40號' }] };
+    }
+
+    function saveCurrentUserData() { localStorage.setItem('tripData_' + currentUserID, JSON.stringify(currentUserData)); }
+
+    function renderLocations() {
+        const container = document.getElementById('quickDestContainer');
+        container.innerHTML = '';
+        currentUserData.locations.forEach((loc, index) => {
+            const fullStr = `${loc.name} (${loc.addr})`;
+            const tag = document.createElement('div');
+            tag.className = 'btn-tag';
+            tag.innerHTML = `
+                <div class="tag-main" onclick="setField('destInput', '${fullStr}')">${loc.name}</div>
+                <div class="tag-to-start" onclick="setField('startPoint', '${fullStr}')" title="設為起點">📍</div>
+                <div class="del-tag" onclick="deleteLocation(event, ${index})">×</div>
+            `;
+            container.appendChild(tag);
+        });
+    }
+
+    function setField(fieldId, val) { document.getElementById(fieldId).value = val; }
+
+    function addLocation() {
+        const name = document.getElementById('newPlaceName').value.trim();
+        const addr = document.getElementById('newPlaceAddr').value.trim();
+        if(name && addr) {
+            currentUserData.locations.push({ name, addr });
+            document.getElementById('newPlaceName').value = '';
+            document.getElementById('newPlaceAddr').value = '';
+            saveCurrentUserData(); renderLocations();
+        }
+    }
+
+    function deleteLocation(e, index) {
+        e.stopPropagation();
+        if(confirm('確定刪除？')) { currentUserData.locations.splice(index, 1); saveCurrentUserData(); renderLocations(); }
+    }
+
+    // --- 以下為維持不變的邏輯 ---
+    function renderUserDropdown() {
+        const dropdown = document.getElementById('userDropdown'); dropdown.innerHTML = '';
+        globalUsers.forEach(user => { const opt = new Option(user.name, user.id); if (user.id === currentUserID) opt.selected = true; dropdown.add(opt); });
+    }
+    function addNewUser() { const name = prompt("姓名："); if (name?.trim()) { const newId = 'user_' + Date.now(); globalUsers.push({ id: newId, name: name.trim() }); saveUserList(); currentUserID = newId; switchUser(); } }
+    function renameUser() { const user = globalUsers.find(u => u.id === currentUserID); const name = prompt("改名：", user.name); if (name?.trim()) { user.name = name.trim(); saveUserList(); renderUserDropdown(); updateTitle(); } }
+    function deleteUser() { if (globalUsers.length <= 1 || !confirm("確定刪除？")) return; globalUsers = globalUsers.filter(u => u.id !== currentUserID); currentUserID = globalUsers[0].id; saveUserList(); switchUser(); }
+    function saveUserList() { localStorage.setItem('trip_UserList', JSON.stringify(globalUsers)); localStorage.setItem('trip_LastUserID', currentUserID); }
+    function updateTitle() { document.getElementById('mainTitle').innerText = `🚀 公出快速產生器 (${globalUsers.find(u => u.id === currentUserID).name})`; }
+    function toggleAdmin() { const box = document.getElementById('adminBox'); box.style.display = (box.style.display === 'block') ? 'none' : 'block'; }
+    function smartFormatDest(el) {
+        let val = el.value.trim();
+        if ((val.includes('市') || val.includes('縣')) && val.length > 8) {
+            val = val.replace(/\d{3,6}/, '').trim();
+            const cityKeywords = ["台南", "臺南", "嘉義", "雲林", "台北", "臺北", "台中", "臺中", "桃園", "新竹", "苗栗", "彰化", "南投", "屏東", "宜蘭", "花蓮", "台東", "臺東", "基隆", "新北", "高雄"];
+            let splitIndex = -1;
+            cityKeywords.forEach(kw => { let idx = val.lastIndexOf(kw); if (idx > splitIndex) splitIndex = idx; });
+            if (splitIndex > 0) {
+                let namePart = val.substring(0, splitIndex).trim();
+                let addrPart = val.substring(splitIndex).trim();
+                if (!namePart.includes('(')) el.value = `${namePart} (${addrPart})`;
+            }
+        }
+    }
+    function generate() {
+        let name = document.getElementById('tripType').value;
+        if(name === '辦理聯繫會議') name = `辦理${document.getElementById('monthInput').value}月份聯繫會議`;
+        if(name === 'custom') name = document.getElementById('customTrip').value;
+        const date = document.getElementById('dateStr').value;
+        const actT = `${document.getElementById('actS_H').value}:${document.getElementById('actS_M').value}-${document.getElementById('actE_H').value}:${document.getElementById('actE_M').value}`;
+        const tripT = `${document.getElementById('tripS_H').value}:${document.getElementById('tripS_M').value}-${document.getElementById('tripE_H').value}:${document.getElementById('tripE_M').value}`;
+        const startFull = document.getElementById('startPoint').value;
+        const destFull = document.getElementById('destInput').value;
+        const km = parseFloat(document.getElementById('km').value) || 0;
+        const driveT = document.getElementById('driveTime').value;
+        let hours = ((parseInt(document.getElementById('tripE_H').value)*60 + parseInt(document.getElementById('tripE_M').value)) - (parseInt(document.getElementById('tripS_H').value)*60 + parseInt(document.getElementById('tripS_M').value))) / 60;
+        let lunchText = document.getElementById('minusLunch').checked ? " (含午休 1 小時)" : "";
+        const type = hours <= 2 ? "公出" : "出差";
+        document.getElementById('output').value = `${type}名稱：${name}\n活動時間：${date} ${actT}\n${type}時間：${tripT} (共 ${hours} 小時${lunchText})\n${type}地點：${destFull}\n行經路線：${startFull} > ${destFull} > ${startFull}\n最遠距離：${km.toFixed(1)} KM\n總公里數：${(km * 2).toFixed(1)} KM\n路程統計：單程車程公里數 ${km.toFixed(1)} km，單程車程時間約 ${driveT} 分鐘。`;
+        currentEditIndex = null; updateHistoryActiveStates();
+    }
+    function submitToHistory() {
+        const content = document.getElementById('output').value; if (!content || content.includes('預覽')) return alert('請產生內容');
+        const dateMatch = content.match(/\d+年\d+月\d+日/); const dateLabel = dateMatch ? dateMatch[0] : "未定義";
+        if (currentEditIndex !== null) currentUserData.history[currentEditIndex] = { dateLabel, content };
+        else currentUserData.history.unshift({ dateLabel, content });
+        saveCurrentUserData(); renderHistory(); navigator.clipboard.writeText(content); alert('已儲存並複製！');
+    }
+    function renderHistory() {
+        const list = document.getElementById('historyList'); list.innerHTML = '';
+        currentUserData.history.forEach((rec, index) => {
+            const div = document.createElement('div'); div.className = `history-item ${currentEditIndex === index ? 'active' : ''}`;
+            div.onclick = () => { currentEditIndex = index; document.getElementById('output').value = rec.content; updateHistoryActiveStates(); };
+            div.innerHTML = `${rec.dateLabel} <button class="btn-del-mini" onclick="deleteHistory(event, ${index})">×</button>`;
+            list.appendChild(div);
+        });
+    }
+    function deleteHistory(e, index) { e.stopPropagation(); if(confirm('刪除？')) { currentUserData.history.splice(index, 1); saveCurrentUserData(); renderHistory(); } }
+    function updateHistoryActiveStates() { document.querySelectorAll('.history-item').forEach((item, idx) => item.classList.toggle('active', idx === currentEditIndex)); }
+    function fillTimeDropdowns() {
+        const hs = ["08","09","10","11","12","13","14","15","16","17","18","19","20"]; const ms = ["00","15","30","45"];
+        ["actS", "actE", "tripS", "tripE"].forEach(id => { hs.forEach(h => document.getElementById(id + "_H").add(new Option(h, h))); ms.forEach(m => document.getElementById(id + "_M").add(new Option(m, m))); });
+    }
+    function formatDateWithDay(input) {
+        let val = input.value.trim(); let match = val.match(/^(\d{2,3})[\/\-\.](0?\d|1[0-2])[\/\-\.]([0-2]?\d|3[01])$/);
+        if (match) { let mY = parseInt(match[1]); let dO = new Date(mY + 1911, parseInt(match[2]) - 1, parseInt(match[3])); input.value = `${mY}年${parseInt(match[2])}月${parseInt(match[3])}日(${["日","一","二","三","四","五","六"][dO.getDay()]})`; }
+    }
+    function toggleMonthInput() { const v = document.getElementById('tripType').value; document.getElementById('monthDiv').style.display = (v === '辦理聯繫會議') ? 'block' : 'none'; document.getElementById('customTrip').style.display = (v === 'custom') ? 'block' : 'none'; }
+    function openGoogleMaps() { const s = document.getElementById('startPoint').value, d = document.getElementById('destInput').value; if(!s || !d) return alert('請填寫起點與目的地'); window.open(`https://www.google.com/maps/dir/${encodeURIComponent(s)}/${encodeURIComponent(d)}`, '_blank'); }
+
+    fillTimeDropdowns(); switchUser();
+</script>
+</body>
+</html>
