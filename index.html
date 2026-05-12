@@ -242,7 +242,7 @@
     function deleteHistory(e, index) { e.stopPropagation(); if(confirm('刪除？')) { currentUserData.history.splice(index, 1); saveCurrentUserData(); renderHistory(); } }
     function updateHistoryActiveStates() { document.querySelectorAll('.history-item').forEach((item, idx) => item.classList.toggle('active', idx === currentEditIndex)); }
     function fillTimeDropdowns() {
-        const hs = ["08","09","10","11","12","13","14","15","16","17","18","19","20"]; const ms = ["00","15","30","45"];
+        const hs = ["08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24"]; const ms = ["00","15","30","45"];
         ["actS", "actE", "tripS", "tripE"].forEach(id => { hs.forEach(h => document.getElementById(id + "_H").add(new Option(h, h))); ms.forEach(m => document.getElementById(id + "_M").add(new Option(m, m))); });
     }
     function formatDateWithDay(input) {
