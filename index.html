@@ -190,7 +190,7 @@
     function renameUser() { const user = globalUsers.find(u => u.id === currentUserID); const name = prompt("改名：", user.name); if (name?.trim()) { user.name = name.trim(); saveUserList(); renderUserDropdown(); updateTitle(); } }
     function deleteUser() { if (globalUsers.length <= 1 || !confirm("確定刪除？")) return; globalUsers = globalUsers.filter(u => u.id !== currentUserID); currentUserID = globalUsers[0].id; saveUserList(); switchUser(); }
     function saveUserList() { localStorage.setItem('trip_UserList', JSON.stringify(globalUsers)); localStorage.setItem('trip_LastUserID', currentUserID); }
-    function updateTitle() { document.getElementById('mainTitle').innerText = `🚀 公出快速產生器 (${globalUsers.find(u => u.id === currentUserID).name})`; }
+    function updateTitle() { document.getElementById('mainTitle').innerText = `南方實作基地TRIP快手 (${globalUsers.find(u => u.id === currentUserID).name})`; }
     function toggleAdmin() { const box = document.getElementById('adminBox'); box.style.display = (box.style.display === 'block') ? 'none' : 'block'; }
     function smartFormatDest(el) {
         let val = el.value.trim();
