@@ -16,9 +16,10 @@
         .btn-mgmt { flex: 1; padding: 4px; font-size: 11px; background: #475569; color: #cbd5e1; border: none; border-radius: 3px; cursor: pointer; }
 
         .history-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .history-item { background: #334155; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; position: relative; border-left: 4px solid transparent; text-align: center; }
+        .history-item { background: #334155; border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: pointer; position: relative; border-left: 4px solid transparent; text-align: left; transition: 0.2s; font-size: 13px; }
+        .history-item:hover { background: #475569; }
         .history-item.active { background: #1e293b; border-left-color: var(--primary); font-weight: bold; }
-        .btn-del-mini { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #94a3b8; background: none; border: none; font-size: 18px; cursor: pointer; }
+        .btn-del-mini { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #f87171; background: none; border: none; font-size: 18px; cursor: pointer; padding: 5px; }
 
         .main-content { flex: 1; overflow-y: auto; padding: 30px; box-sizing: border-box; }
         .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
@@ -40,13 +41,13 @@
         .admin-toggle { font-size: 0.85em; color: var(--primary); cursor: pointer; text-decoration: underline; margin: 10px 0; display: inline-block; }
         .admin-box { background: #f8fafc; padding: 10px; border-radius: 6px; display: none; margin-bottom: 15px; border: 1px solid #cbd5e1; }
         .time-group { display: flex; align-items: center; gap: 4px; }
-        .time-group select { width: 70px; }
+        .time-group select { width: 75px; }
         
         button { cursor: pointer; border: none; border-radius: 4px; padding: 10px 15px; font-weight: bold; transition: 0.2s; }
         .btn-map { background: var(--success); color: white; width: 100%; margin-top: 10px; }
         .btn-gen { background: var(--primary); color: white; width: 100%; font-size: 1.1em; margin-top: 20px; }
         .btn-submit { background: #8b5cf6; color: white; width: 100%; margin-top: 10px; font-size: 1.1em; }
-        #output { width: 100%; height: 200px; background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px dashed #94a3b8; font-family: monospace; box-sizing: border-box; }
+        #output { width: 100%; height: 220px; background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px dashed #94a3b8; font-family: monospace; box-sizing: border-box; line-height: 1.5; }
         
         #syncOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; color: var(--primary); }
     </style>
@@ -82,19 +83,19 @@
                 <option value="辦理專案展售">辦理專案展售</option>
                 <option value="辦理講座課程">辦理講座課程</option>
                 <option value="辦理企業參訪">辦理企業參訪</option>
-                <option value="辦理聯繫會議">辦理 ( ) 月聯繫會議</option>
+                <option value="辦理聯繫會議">辦理聯繫會議</option>
                 <option value="custom">其他（自行輸入）</option>
             </select>
-            <div id="monthDiv" style="display:none; margin-top:10px;"><input type="number" id="monthInput" placeholder="月份" style="width: 80px;"> 月</div>
+            <div id="monthDiv" style="display:none; margin-top:10px;"><input type="number" id="monthInput" placeholder="月份" style="width: 80px;"> 月聯繫會議</div>
             <input type="text" id="customTrip" placeholder="輸入活動名稱" style="display:none; margin-top:10px;">
         </div>
 
         <div class="section">
             <label>活動日期</label>
-            <input type="text" id="dateStr" placeholder="115/1/1" onblur="formatDateWithDay(this)">
+            <input type="text" id="dateStr" placeholder="例如: 113/5/20" onblur="formatDateWithDay(this)">
             <div class="grid" style="margin-top:15px;">
-                <div><label>活動時間</label><div class="time-group"><select id="actS_H"></select>:<select id="actS_M"></select> ~ <select id="actE_H"></select>:<select id="actE_M"></select></div></div>
-                <div><label>出差時間</label><div class="time-group"><select id="tripS_H"></select>:<select id="tripS_M"></select> ~ <select id="tripE_H"></select>:<select id="tripE_M"></select></div><label style="font-weight:normal; margin-top: 5px;"><input type="checkbox" id="minusLunch"> 包含午休(1h)</label></div>
+                <div><label>活動時間 (公務)</label><div class="time-group"><select id="actS_H"></select>:<select id="actS_M"></select> ~ <select id="actE_H"></select>:<select id="actE_M"></select></div></div>
+                <div><label>出差時間 (交通)</label><div class="time-group"><select id="tripS_H"></select>:<select id="tripS_M"></select> ~ <select id="tripE_H"></select>:<select id="tripE_M"></select></div><label style="font-weight:normal; margin-top: 5px;"><input type="checkbox" id="minusLunch" checked> 包含午休扣除(1h)</label></div>
             </div>
         </div>
 
@@ -110,8 +111,8 @@
             </div>
             <button class="btn-map" onclick="openGoogleMaps()">📍 開啟 Google Maps 查里程</button>
             <div class="grid" style="margin-top:15px;">
-                <div><label>單程公里數</label><input type="number" id="km" step="0.1" placeholder="KM"></div>
-                <div><label>單程分鐘</label><input type="text" id="driveTime" placeholder="分鐘"></div>
+                <div><label>單程公里數 (KM)</label><input type="number" id="km" step="0.1" placeholder="KM"></div>
+                <div><label>單程車程時間 (分)</label><input type="text" id="driveTime" placeholder="分鐘"></div>
             </div>
         </div>
 
@@ -122,7 +123,6 @@
 </div>
 
 <script>
-    // --- 核心配置 ---
     const GAS_URL = "https://script.google.com/macros/s/AKfycby1vQg8WHUvBi_kbgF4vkQV3_eYslo-HqyUMd6HLKRMPW1l3FeJ1bRicKh7DbM5hAJI/exec";
     
     let globalUsers = [];
@@ -130,12 +130,14 @@
     let currentUserData = { history: [], locations: [] };
     let cloudBuffer = []; 
 
-    // --- 雲端通訊邏輯 ---
     async function apiCall(method, data = null) {
         document.getElementById('syncOverlay').style.display = 'flex';
         try {
             const options = { method: method };
-            if (data) options.body = JSON.stringify(data);
+            if (data) {
+                options.body = JSON.stringify(data);
+                // 使用 POST 進行通訊，因 GAS 限制 GET 不帶 body
+            }
             const res = await fetch(GAS_URL, options);
             const result = await res.json();
             document.getElementById('syncOverlay').style.display = 'none';
@@ -143,24 +145,36 @@
         } catch (e) {
             console.error("API Error", e);
             document.getElementById('syncOverlay').style.display = 'none';
+            return null;
         }
     }
 
     async function init() {
+        fillTimeDropdowns();
         const data = await apiCall('GET');
         cloudBuffer = data || [];
         
-        // 抓取成員
-        const users = data.filter(d => d.type === 'history').map(d => ({ id: d.userID, name: d.userName }));
+        // 抓取成員清單
+        const users = cloudBuffer.filter(d => d.type === 'history').map(d => ({ id: d.userID, name: d.userName }));
         globalUsers = users.length > 0 ? users : [{ id: 'user_default', name: '管理員' }];
         
-        // 決定當前使用者
         const lastID = localStorage.getItem('trip_LastUserID');
         currentUserID = globalUsers.find(u => u.id === lastID) ? lastID : globalUsers[0].id;
         
         loadUserCloudData();
         renderUserDropdown();
         updateTitle();
+        setTodayDate();
+    }
+
+    function setTodayDate() {
+        const now = new Date();
+        const y = now.getFullYear() - 1911;
+        const m = now.getMonth() + 1;
+        const d = now.getDate();
+        document.getElementById('dateStr').value = `${y}/${m}/${d}`;
+        document.getElementById('monthInput').value = m;
+        formatDateWithDay(document.getElementById('dateStr'));
     }
 
     function loadUserCloudData() {
@@ -170,7 +184,7 @@
         currentUserData.history = hist ? JSON.parse(hist.content) : [];
         currentUserData.locations = locs ? JSON.parse(locs.content) : [
             { name: '南方實作基地', addr: '台南市新營區大同路32號' },
-            { name: '雲嘉南分署', addr: '台南市官田區工業路40號' }
+            { name: '嘉義辦公室', addr: '嘉義市中山路199號' }
         ];
         renderHistory();
         renderLocations();
@@ -178,6 +192,7 @@
 
     async function saveToCloud(type, contentObj) {
         const user = globalUsers.find(u => u.id === currentUserID);
+        if(!user) return;
         await apiCall('POST', {
             userID: currentUserID,
             userName: user.name,
@@ -186,7 +201,6 @@
         });
     }
 
-    // --- 成員管理 ---
     function renderUserDropdown() {
         const dropdown = document.getElementById('userDropdown'); dropdown.innerHTML = '';
         globalUsers.forEach(user => { 
@@ -209,7 +223,7 @@
             const newId = 'user_' + Date.now();
             globalUsers.push({ id: newId, name: name.trim() });
             currentUserID = newId;
-            await saveToCloud('history', []); // 初始化
+            await saveToCloud('history', []); 
             location.reload(); 
         }
     }
@@ -225,50 +239,16 @@
         }
     }
 
-    // --- 地點與紀錄 ---
-    async function addLocation() {
-        const name = document.getElementById('newPlaceName').value.trim();
-        const addr = document.getElementById('newPlaceAddr').value.trim();
-        if(name && addr) {
-            currentUserData.locations.push({ name, addr });
-            await saveToCloud('locations', currentUserData.locations);
-            renderLocations();
-            document.getElementById('newPlaceName').value = '';
-            document.getElementById('newPlaceAddr').value = '';
+    async function deleteUser() {
+        if(confirm('警告：這將從列表移除該使用者，雲端資料仍保留。確定？')) {
+            globalUsers = globalUsers.filter(u => u.id !== currentUserID);
+            if(globalUsers.length === 0) globalUsers = [{ id: 'user_default', name: '管理員' }];
+            currentUserID = globalUsers[0].id;
+            switchUser();
+            renderUserDropdown();
         }
     }
 
-    async function submitToHistory() {
-        const content = document.getElementById('output').value;
-        if (!content || content.includes('預覽')) return alert('請產生內容');
-        const dateMatch = content.match(/\d+年\d+月\d+日/);
-        const dateLabel = dateMatch ? dateMatch[0] : "紀錄";
-        currentUserData.history.unshift({ dateLabel, content });
-        await saveToCloud('history', currentUserData.history);
-        renderHistory();
-        navigator.clipboard.writeText(content);
-        alert('已存入雲端並複製！');
-    }
-
-    async function deleteHistory(e, index) {
-        e.stopPropagation();
-        if(confirm('刪除？')) {
-            currentUserData.history.splice(index, 1);
-            await saveToCloud('history', currentUserData.history);
-            renderHistory();
-        }
-    }
-
-    async function deleteLocation(e, index) {
-        e.stopPropagation();
-        if(confirm('刪除地點？')) {
-            currentUserData.locations.splice(index, 1);
-            await saveToCloud('locations', currentUserData.locations);
-            renderLocations();
-        }
-    }
-
-    // --- UI Helper (維持原有的邏輯) ---
     function renderLocations() {
         const container = document.getElementById('quickDestContainer');
         container.innerHTML = '';
@@ -293,35 +273,109 @@
 
     function updateTitle() { 
         const u = globalUsers.find(u => u.id === currentUserID);
-        document.getElementById('mainTitle').innerText = `南方實作基地TRIP快手 (${u ? u.name : ''})`; 
+        document.getElementById('mainTitle').innerText = `南方實作基地TRIP快手 (${u ? u.name : '未知'})`; 
     }
 
     function generate() {
         let name = document.getElementById('tripType').value;
         if(name === '辦理聯繫會議') name = `辦理${document.getElementById('monthInput').value}月份聯繫會議`;
         if(name === 'custom') name = document.getElementById('customTrip').value;
+        
         const date = document.getElementById('dateStr').value;
         const actT = `${document.getElementById('actS_H').value}:${document.getElementById('actS_M').value}-${document.getElementById('actE_H').value}:${document.getElementById('actE_M').value}`;
         const tripT = `${document.getElementById('tripS_H').value}:${document.getElementById('tripS_M').value}-${document.getElementById('tripE_H').value}:${document.getElementById('tripE_M').value}`;
+        
         const startFull = document.getElementById('startPoint').value;
         const destFull = document.getElementById('destInput').value;
         const km = parseFloat(document.getElementById('km').value) || 0;
         const driveT = document.getElementById('driveTime').value;
-        let hours = ((parseInt(document.getElementById('tripE_H').value)*60 + parseInt(document.getElementById('tripE_M').value)) - (parseInt(document.getElementById('tripS_H').value)*60 + parseInt(document.getElementById('tripS_M').value))) / 60;
-        let lunchText = document.getElementById('minusLunch').checked ? " (含午休 1 小時)" : "";
+
+        // 小時計算修正
+        let startTotal = parseInt(document.getElementById('tripS_H').value) * 60 + parseInt(document.getElementById('tripS_M').value);
+        let endTotal = parseInt(document.getElementById('tripE_H').value) * 60 + parseInt(document.getElementById('tripE_M').value);
+        let diffMin = endTotal - startTotal;
+        if (document.getElementById('minusLunch').checked) diffMin -= 60;
+        
+        let hours = (diffMin / 60).toFixed(1);
+        if (hours < 0) hours = 0;
+        
         const type = hours <= 2 ? "公出" : "出差";
-        document.getElementById('output').value = `${type}名稱：${name}\n活動時間：${date} ${actT}\n${type}時間：${tripT} (共 ${hours} 小時${lunchText})\n${type}地點：${destFull}\n行經路線：${startFull} > ${destFull} > ${startFull}\n最遠距離：${km.toFixed(1)} KM\n總公里數：${(km * 2).toFixed(1)} KM\n路程統計：單程車程公里數 ${km.toFixed(1)} km，單程車程時間約 ${driveT} 分鐘。`;
+        let lunchNote = document.getElementById('minusLunch').checked ? " (已扣除午休 1 小時)" : "";
+
+        document.getElementById('output').value = `${type}名稱：${name}
+活動時間：${date} ${actT}
+${type}時間：${tripT} (共 ${hours} 小時${lunchNote})
+${type}地點：${destFull}
+行經路線：${startFull} > ${destFull} > ${startFull}
+單程里程：${km.toFixed(1)} KM
+總公里數：${(km * 2).toFixed(1)} KM
+路程統計：單程車程公里數 ${km.toFixed(1)} km，單程車程時間約 ${driveT} 分鐘。`;
+    }
+
+    async function submitToHistory() {
+        const content = document.getElementById('output').value;
+        if (!content || content.includes('預覽')) return alert('請先產生預覽內容');
+        
+        const dateMatch = content.match(/\d+年\d+月\d+日/);
+        const dateLabel = dateMatch ? dateMatch[0] : "紀錄 " + new Date().toLocaleTimeString();
+        
+        currentUserData.history.unshift({ dateLabel, content });
+        if(currentUserData.history.length > 30) currentUserData.history.pop();
+        
+        await saveToCloud('history', currentUserData.history);
+        renderHistory();
+        
+        navigator.clipboard.writeText(content).then(() => {
+            alert('已成功存入雲端並複製內容！');
+        });
+    }
+
+    async function deleteHistory(e, index) {
+        e.stopPropagation();
+        if(confirm('確定要刪除此筆紀錄嗎？')) {
+            currentUserData.history.splice(index, 1);
+            await saveToCloud('history', currentUserData.history);
+            renderHistory();
+        }
+    }
+
+    async function addLocation() {
+        const name = document.getElementById('newPlaceName').value.trim();
+        const addr = document.getElementById('newPlaceAddr').value.trim();
+        if(name && addr) {
+            currentUserData.locations.push({ name, addr });
+            await saveToCloud('locations', currentUserData.locations);
+            renderLocations();
+            document.getElementById('newPlaceName').value = '';
+            document.getElementById('newPlaceAddr').value = '';
+        }
+    }
+
+    async function deleteLocation(e, index) {
+        e.stopPropagation();
+        if(confirm('刪除常用地點？')) {
+            currentUserData.locations.splice(index, 1);
+            await saveToCloud('locations', currentUserData.locations);
+            renderLocations();
+        }
     }
 
     function setField(fieldId, val) { document.getElementById(fieldId).value = val; }
-    function toggleAdmin() { const box = document.getElementById('adminBox'); box.style.display = (box.style.display === 'block') ? 'none' : 'block'; }
+    
+    function toggleAdmin() { 
+        const box = document.getElementById('adminBox'); 
+        box.style.display = (box.style.display === 'block') ? 'none' : 'block'; 
+    }
+
     function smartFormatDest(el) {
         let val = el.value.trim();
-        if ((val.includes('市') || val.includes('縣')) && val.length > 8) {
-            val = val.replace(/\d{3,6}/, '').trim();
+        // 偵測是否為地址格式 (包含市或縣)
+        if ((val.includes('市') || val.includes('縣')) && val.length > 6) {
+            val = val.replace(/^\d{3,5}/, '').trim(); // 去除郵遞區號
             const cityKeywords = ["台南", "臺南", "嘉義", "雲林", "台北", "臺北", "台中", "臺中", "桃園", "新竹", "苗栗", "彰化", "南投", "屏東", "宜蘭", "花蓮", "台東", "臺東", "基隆", "新北", "高雄"];
             let splitIndex = -1;
-            cityKeywords.forEach(kw => { let idx = val.lastIndexOf(kw); if (idx > splitIndex) splitIndex = idx; });
+            cityKeywords.forEach(kw => { let idx = val.indexOf(kw); if (idx !== -1 && (splitIndex === -1 || idx < splitIndex)) splitIndex = idx; });
+            
             if (splitIndex > 0) {
                 let namePart = val.substring(0, splitIndex).trim();
                 let addrPart = val.substring(splitIndex).trim();
@@ -329,19 +383,45 @@
             }
         }
     }
-    function fillTimeDropdowns() {
-        const hs = ["04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24"]; const ms = ["00","15","30","45"];
-        ["actS", "actE", "tripS", "tripE"].forEach(id => { hs.forEach(h => document.getElementById(id + "_H").add(new Option(h, h))); ms.forEach(m => document.getElementById(id + "_M").add(new Option(m, m))); });
-    }
-    function formatDateWithDay(input) {
-        let val = input.value.trim(); let match = val.match(/^(\d{2,3})[\/\-\.](0?\d|1[0-2])[\/\-\.]([0-2]?\d|3[01])$/);
-        if (match) { let mY = parseInt(match[1]); let dO = new Date(mY + 1911, parseInt(match[2]) - 1, parseInt(match[3])); input.value = `${mY}年${parseInt(match[2])}月${parseInt(match[3])}日(${["日","一","二","三","四","五","六"][dO.getDay()]})`; }
-    }
-    function toggleMonthInput() { const v = document.getElementById('tripType').value; document.getElementById('monthDiv').style.display = (v === '辦理聯繫會議') ? 'block' : 'none'; document.getElementById('customTrip').style.display = (v === 'custom') ? 'block' : 'none'; }
-    function openGoogleMaps() { const s = document.getElementById('startPoint').value, d = document.getElementById('destInput').value; if(!s || !d) return alert('請填寫起點與目的地'); window.open(`https://www.google.com/maps/dir/${encodeURIComponent(s)}/${encodeURIComponent(d)}`, '_blank'); }
 
-    fillTimeDropdowns();
-    init(); // 啟動雲端同步
+    function fillTimeDropdowns() {
+        const hs = ["07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22"]; 
+        const ms = ["00","10","15","20","30","40","45","50"];
+        ["actS", "actE", "tripS", "tripE"].forEach(id => {
+            const hSel = document.getElementById(id + "_H");
+            const mSel = document.getElementById(id + "_M");
+            hSel.innerHTML = ''; mSel.innerHTML = '';
+            hs.forEach(h => hSel.add(new Option(h, h))); 
+            ms.forEach(m => mSel.add(new Option(m, m))); 
+        });
+        // 預設值
+        document.getElementById('tripS_H').value = "08";
+        document.getElementById('tripE_H').value = "17";
+    }
+
+    function formatDateWithDay(input) {
+        let val = input.value.trim(); 
+        let match = val.match(/^(\d{2,3})[\/\-\.](0?\d|1[0-2])[\/\-\.]([0-2]?\d|3[01])$/);
+        if (match) { 
+            let mY = parseInt(match[1]); 
+            let dO = new Date(mY + 1911, parseInt(match[2]) - 1, parseInt(match[3])); 
+            input.value = `${mY}年${parseInt(match[2])}月${parseInt(match[3])}日 (${["日","一","二","三","四","五","六"][dO.getDay()]})`; 
+        }
+    }
+
+    function toggleMonthInput() { 
+        const v = document.getElementById('tripType').value; 
+        document.getElementById('monthDiv').style.display = (v === '辦理聯繫會議') ? 'block' : 'none'; 
+        document.getElementById('customTrip').style.display = (v === 'custom') ? 'block' : 'none'; 
+    }
+
+    function openGoogleMaps() { 
+        const s = document.getElementById('startPoint').value, d = document.getElementById('destInput').value; 
+        if(!s || !d) return alert('請填寫起點與目的地'); 
+        window.open(`https://www.google.com/maps/dir/${encodeURIComponent(s)}/${encodeURIComponent(d)}`, '_blank'); 
+    }
+
+    init(); 
 </script>
 </body>
 </html>
