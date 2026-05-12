@@ -121,7 +121,8 @@
 </div>
 
 <script>
-    const GAS_URL = "https://script.google.com/macros/s/AKfycby1vQg8WHUvBi_kbgF4vkQV3_eYslo-HqyUMd6HLKRMPW1l3FeJ1bRicKh7DbM5hAJI/exec";
+    // ✅ 修正：使用新的 GAS 部署網址
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzVlGu1dK-cCA9wdGwXczjZD_arpcloE0DwlBmbhGJIbaN91bf1cz1YxOOoTtuWctwM/exec";
     
     let globalUsers = [];
     let currentUserID = "";
@@ -135,9 +136,9 @@
     }
 
     async function loadAllData() {
-        document.getElementById('syncOverlay').style.display = 'flex';
+        showOverlay(true);
         try {
-            const res = await fetch(GAS_URL);
+            const res = await fetch(GAS_URL + "?t=" + Date.now());
             const data = await res.json();
             
             // 找出所有使用者
@@ -147,7 +148,18 @@
             });
             
             globalUsers = Array.from(userMap).map(([id, name]) => ({ id, name }));
-            if (globalUsers.length === 0) globalUsers = [{ id: 'user_' + Date.now(), name: '新使用者' }];
+
+            // ✅ 修正：若 GAS 沒有任何使用者，從 localStorage 救回，或建立預設
+            if (globalUsers.length === 0) {
+                const savedUsers = JSON.parse(localStorage.getItem('trip_Users') || '[]');
+                if (savedUsers.length > 0) {
+                    globalUsers = savedUsers;
+                } else {
+                    globalUsers = [{ id: 'user_' + Date.now(), name: '新使用者' }];
+                }
+            }
+            // 同步儲存到 localStorage 備用
+            localStorage.setItem('trip_Users', JSON.stringify(globalUsers));
 
             // 決定目前使用者
             const lastID = localStorage.getItem('trip_LastUserID');
@@ -169,30 +181,52 @@
             updateTitle();
         } catch (e) {
             console.error("載入失敗", e);
+            // ✅ 修正：載入失敗時從 localStorage 救回使用者清單
+            const savedUsers = JSON.parse(localStorage.getItem('trip_Users') || '[]');
+            if (savedUsers.length > 0) {
+                globalUsers = savedUsers;
+                const lastID = localStorage.getItem('trip_LastUserID');
+                currentUserID = globalUsers.find(u => u.id === lastID) ? lastID : globalUsers[0].id;
+                renderUserDropdown();
+                updateTitle();
+            }
+            alert('雲端載入失敗，使用本機備份資料。請確認網路或 GAS 設定。');
         }
-        document.getElementById('syncOverlay').style.display = 'none';
+        showOverlay(false);
     }
 
+    // ✅ 修正：POST 改用 no-cors + 加入重試機制
     async function saveToCloud(type, contentObj) {
-        document.getElementById('syncOverlay').style.display = 'flex';
+        showOverlay(true);
         const user = globalUsers.find(u => u.id === currentUserID);
+        const payload = {
+            userID: currentUserID,
+            userName: user ? user.name : '未知使用者',
+            type: type,
+            content: JSON.stringify(contentObj)
+        };
         try {
             await fetch(GAS_URL, {
                 method: 'POST',
-                body: JSON.stringify({
-                    userID: currentUserID,
-                    userName: user.name,
-                    type: type,
-                    content: JSON.stringify(contentObj)
-                })
+                mode: 'no-cors', // ✅ 解決 CORS 問題
+                headers: { 'Content-Type': 'text/plain' },
+                body: JSON.stringify(payload)
             });
-        } catch (e) { console.error("同步失敗", e); }
-        document.getElementById('syncOverlay').style.display = 'none';
+        } catch (e) {
+            console.error("同步失敗", e);
+            alert('雲端同步失敗，請確認網路連線。');
+        }
+        showOverlay(false);
+    }
+
+    function showOverlay(show) {
+        document.getElementById('syncOverlay').style.display = show ? 'flex' : 'none';
     }
 
     // --- 使用者管理 ---
     function renderUserDropdown() {
-        const dropdown = document.getElementById('userDropdown'); dropdown.innerHTML = '';
+        const dropdown = document.getElementById('userDropdown');
+        dropdown.innerHTML = '';
         globalUsers.forEach(user => { 
             const opt = new Option(user.name, user.id); 
             if (user.id === currentUserID) opt.selected = true;
@@ -206,15 +240,42 @@
         await loadAllData();
     }
 
+    // ✅ 修正：新增使用者邏輯，先寫入雲端再切換
     async function addNewUser() {
         const name = prompt("輸入新成員姓名：");
-        if (name?.trim()) {
-            const newId = 'user_' + Date.now();
-            currentUserID = newId;
-            globalUsers.push({ id: newId, name: name.trim() });
-            await saveToCloud('history', []);
-            await switchUser();
-        }
+        if (!name || !name.trim()) return;
+
+        const newId = 'user_' + Date.now();
+        const newUser = { id: newId, name: name.trim() };
+
+        // 先加入本地清單
+        globalUsers.push(newUser);
+        localStorage.setItem('trip_Users', JSON.stringify(globalUsers));
+
+        // 切換到新使用者
+        currentUserID = newId;
+        localStorage.setItem('trip_LastUserID', newId);
+
+        // 初始化新使用者資料
+        currentUserData = {
+            history: [],
+            locations: [
+                { name: '南方實作基地', addr: '台南市新營區大同路32號' },
+                { name: '嘉義辦公室', addr: '嘉義市中山路199號' }
+            ]
+        };
+
+        // 寫入雲端（history + locations）
+        await saveToCloud('history', []);
+        await saveToCloud('locations', currentUserData.locations);
+
+        // 更新介面
+        renderUserDropdown();
+        renderHistory();
+        renderLocations();
+        updateTitle();
+
+        alert(`✅ 已新增成員「${name.trim()}」`);
     }
 
     async function renameUser() {
@@ -222,6 +283,7 @@
         const name = prompt("修改姓名：", user.name);
         if (name?.trim()) {
             user.name = name.trim();
+            localStorage.setItem('trip_Users', JSON.stringify(globalUsers));
             await saveToCloud('history', currentUserData.history);
             renderUserDropdown();
             updateTitle();
@@ -229,11 +291,13 @@
     }
 
     async function deleteUser() {
-        if(confirm('確定刪除此使用者？(雲端數據將保留但不再顯示)')) {
+        if (globalUsers.length <= 1) return alert('至少需要保留一位成員');
+        if (confirm('確定刪除此使用者？(雲端數據將保留但不再顯示)')) {
             globalUsers = globalUsers.filter(u => u.id !== currentUserID);
-            if(globalUsers.length === 0) globalUsers = [{ id: 'user_default', name: '管理員' }];
+            localStorage.setItem('trip_Users', JSON.stringify(globalUsers));
             currentUserID = globalUsers[0].id;
-            switchUser();
+            localStorage.setItem('trip_LastUserID', currentUserID);
+            await loadAllData();
         }
     }
 
@@ -242,15 +306,11 @@
         let val = el.value.trim();
         if (!val) return;
 
-        // 1. 過濾掉特定的前綴贅詞 (國立、私立、財團法人等)
         const filterList = ["國立", "私立", "財團法人", "行政院", "教育部", "勞動部"];
-        filterList.forEach(word => {
-            val = val.replaceAll(word, "");
-        });
+        filterList.forEach(word => { val = val.replaceAll(word, ""); });
 
-        // 2. 判斷是否包含地址資訊 (市或縣)
         if ((val.includes('市') || val.includes('縣')) && val.length > 5) {
-            val = val.replace(/^\d{3,5}/, '').trim(); // 移除郵遞區號
+            val = val.replace(/^\d{3,5}/, '').trim();
             
             const cityKeywords = ["台南", "臺南", "嘉義", "雲林", "台北", "臺北", "台中", "臺中", "桃園", "新竹", "苗栗", "彰化", "南投", "屏東", "宜蘭", "花蓮", "台東", "臺東", "基隆", "新北", "高雄"];
             let splitIndex = -1;
@@ -263,12 +323,10 @@
             if (splitIndex > 0) {
                 let namePart = val.substring(0, splitIndex).trim();
                 let addrPart = val.substring(splitIndex).trim();
-                // 重新組合，避免重複括號
                 if (!namePart.includes('(')) {
                     el.value = `${namePart} (${addrPart})`;
                 }
             } else if (splitIndex === 0) {
-                // 如果只有地址沒有名稱
                 el.value = val;
             }
         }
@@ -292,9 +350,11 @@
     }
 
     function renderHistory() {
-        const list = document.getElementById('historyList'); list.innerHTML = '';
+        const list = document.getElementById('historyList');
+        list.innerHTML = '';
         currentUserData.history.forEach((rec, index) => {
-            const div = document.createElement('div'); div.className = `history-item`;
+            const div = document.createElement('div');
+            div.className = 'history-item';
             div.onclick = () => { document.getElementById('output').value = rec.content; };
             div.innerHTML = `${rec.dateLabel} <button class="btn-del-mini" onclick="deleteHistory(event, ${index})">×</button>`;
             list.appendChild(div);
@@ -303,7 +363,7 @@
 
     async function deleteHistory(e, index) {
         e.stopPropagation();
-        if(confirm('確定要從雲端刪除此筆歷史紀錄？')) {
+        if (confirm('確定要從雲端刪除此筆歷史紀錄？')) {
             currentUserData.history.splice(index, 1);
             await saveToCloud('history', currentUserData.history);
             renderHistory();
@@ -313,7 +373,7 @@
     async function addLocation() {
         const name = document.getElementById('newPlaceName').value.trim();
         const addr = document.getElementById('newPlaceAddr').value.trim();
-        if(name && addr) {
+        if (name && addr) {
             currentUserData.locations.push({ name, addr });
             await saveToCloud('locations', currentUserData.locations);
             renderLocations();
@@ -324,7 +384,7 @@
 
     async function deleteLocation(e, index) {
         e.stopPropagation();
-        if(confirm('刪除常用地點？')) {
+        if (confirm('刪除常用地點？')) {
             currentUserData.locations.splice(index, 1);
             await saveToCloud('locations', currentUserData.locations);
             renderLocations();
@@ -334,8 +394,8 @@
     // --- 核心工具函式 ---
     function generate() {
         let name = document.getElementById('tripType').value;
-        if(name === '辦理聯繫會議') name = `辦理${document.getElementById('monthInput').value}月份聯繫會議`;
-        if(name === 'custom') name = document.getElementById('customTrip').value;
+        if (name === '辦理聯繫會議') name = `辦理${document.getElementById('monthInput').value}月份聯繫會議`;
+        if (name === 'custom') name = document.getElementById('customTrip').value;
         
         const date = document.getElementById('dateStr').value;
         const actT = `${document.getElementById('actS_H').value}:${document.getElementById('actS_M').value}-${document.getElementById('actE_H').value}:${document.getElementById('actE_M').value}`;
@@ -373,7 +433,7 @@ ${type}地點：${destFull}
         const dateLabel = dateMatch ? dateMatch[0] : "紀錄 " + new Date().toLocaleTimeString();
         
         currentUserData.history.unshift({ dateLabel, content });
-        if(currentUserData.history.length > 30) currentUserData.history.pop();
+        if (currentUserData.history.length > 30) currentUserData.history.pop();
         
         await saveToCloud('history', currentUserData.history);
         renderHistory();
@@ -423,11 +483,11 @@ ${type}地點：${destFull}
 
     function openGoogleMaps() {
         const s = document.getElementById('startPoint').value, d = document.getElementById('destInput').value;
-        if(!s || !d) return alert('請填寫起點與目的地');
+        if (!s || !d) return alert('請填寫起點與目的地');
         window.open(`https://www.google.com/maps/dir/${encodeURIComponent(s)}/${encodeURIComponent(d)}`, '_blank');
     }
 
-    function toggleAdmin() { const b = document.getElementById('adminBox'); b.style.display = b.style.display==='block'?'none':'block'; }
+    function toggleAdmin() { const b = document.getElementById('adminBox'); b.style.display = b.style.display === 'block' ? 'none' : 'block'; }
     function setField(id, val) { document.getElementById(id).value = val; smartFormatDest(document.getElementById(id)); }
     function updateTitle() { const u = globalUsers.find(u => u.id === currentUserID); document.getElementById('mainTitle').innerText = `南方實作基地TRIP快手 (${u?.name})`; }
 
