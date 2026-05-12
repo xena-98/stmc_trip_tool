@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>南方實作基地TRIP快手</title>
+    <title>南方實作基地TRIP快手-雲端同步版</title>
     <style>
         :root { --primary: #2563eb; --bg: #f1f5f9; --success: #059669; --sidebar: #1e293b; }
         body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); margin: 0; display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
@@ -29,10 +29,7 @@
         input, select { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px; box-sizing: border-box; }
         
         .quick-dest { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-        .btn-tag { 
-            background: #e2e8f0; color: #475569; padding: 0; border-radius: 20px; 
-            font-size: 12px; cursor: pointer; border: 1px solid #cbd5e1; display: flex; overflow: hidden;
-        }
+        .btn-tag { background: #e2e8f0; color: #475569; padding: 0; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid #cbd5e1; display: flex; overflow: hidden; }
         .tag-main { padding: 4px 8px 4px 12px; }
         .tag-main:hover { background: #cbd5e1; }
         .tag-to-start { background: #cbd5e1; padding: 4px 8px; border-left: 1px solid #94a3b8; font-weight: bold; }
@@ -50,9 +47,13 @@
         .btn-gen { background: var(--primary); color: white; width: 100%; font-size: 1.1em; margin-top: 20px; }
         .btn-submit { background: #8b5cf6; color: white; width: 100%; margin-top: 10px; font-size: 1.1em; }
         #output { width: 100%; height: 200px; background: #f8fafc; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px dashed #94a3b8; font-family: monospace; box-sizing: border-box; }
+        
+        #syncOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.7); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
+
+<div id="syncOverlay">☁️ 雲端同步中...</div>
 
 <div class="sidebar">
     <div class="sidebar-header">
@@ -65,7 +66,7 @@
                 <button class="btn-mgmt" onclick="deleteUser()" style="color:#f87171;">🗑️ 刪除</button>
             </div>
         </div>
-        <p style="margin-top:20px; font-weight:bold; font-size:1.1em;">📅 歷史出差日期</p>
+        <p style="margin-top:20px; font-weight:bold; font-size:1.1em;">📅 歷史紀錄</p>
     </div>
     <div class="history-list" id="historyList"></div>
 </div>
@@ -99,18 +100,14 @@
 
         <div class="section">
             <label>起點設定</label>
-            <input type="text" id="startPoint" placeholder="點選下方標籤右側 📍 可帶入起點" oninput="smartFormatDest(this)">
-
+            <input type="text" id="startPoint" placeholder="點選標籤右側 📍 可帶入起點" oninput="smartFormatDest(this)">
             <label style="margin-top:15px;">目的地</label>
-            <input id="destInput" placeholder="貼上地址或點選下方標籤文字" oninput="smartFormatDest(this)">
-            
+            <input id="destInput" placeholder="貼上地址或點選標籤文字" oninput="smartFormatDest(this)">
             <div class="quick-dest" id="quickDestContainer"></div>
-
             <span class="admin-toggle" onclick="toggleAdmin()">⚙️ 管理個人常用地點</span>
             <div id="adminBox" class="admin-box">
                 <div style="display:flex; gap:5px;"><input type="text" id="newPlaceName" placeholder="地名" style="flex:1;"><input type="text" id="newPlaceAddr" placeholder="地址" style="flex:2;"><button style="background:#1e293b; color:white;" onclick="addLocation()">新增</button></div>
             </div>
-
             <button class="btn-map" onclick="openGoogleMaps()">📍 開啟 Google Maps 查里程</button>
             <div class="grid" style="margin-top:15px;">
                 <div><label>單程公里數</label><input type="number" id="km" step="0.1" placeholder="KM"></div>
@@ -125,28 +122,153 @@
 </div>
 
 <script>
-    let globalUsers = JSON.parse(localStorage.getItem('trip_UserList')) || [{ id: 'user_' + Date.now(), name: '管理員' }];
-    let currentUserID = localStorage.getItem('trip_LastUserID') || globalUsers[0].id;
-    let currentUserData = {};
-    let currentEditIndex = null;
+    // --- 核心配置 ---
+    const GAS_URL = "https://script.google.com/macros/s/AKfycby1vQg8WHUvBi_kbgF4vkQV3_eYslo-HqyUMd6HLKRMPW1l3FeJ1bRicKh7DbM5hAJI/exec";
+    
+    let globalUsers = [];
+    let currentUserID = "";
+    let currentUserData = { history: [], locations: [] };
+    let cloudBuffer = []; 
+
+    // --- 雲端通訊邏輯 ---
+    async function apiCall(method, data = null) {
+        document.getElementById('syncOverlay').style.display = 'flex';
+        try {
+            const options = { method: method };
+            if (data) options.body = JSON.stringify(data);
+            const res = await fetch(GAS_URL, options);
+            const result = await res.json();
+            document.getElementById('syncOverlay').style.display = 'none';
+            return result;
+        } catch (e) {
+            console.error("API Error", e);
+            document.getElementById('syncOverlay').style.display = 'none';
+        }
+    }
+
+    async function init() {
+        const data = await apiCall('GET');
+        cloudBuffer = data || [];
+        
+        // 抓取成員
+        const users = data.filter(d => d.type === 'history').map(d => ({ id: d.userID, name: d.userName }));
+        globalUsers = users.length > 0 ? users : [{ id: 'user_default', name: '管理員' }];
+        
+        // 決定當前使用者
+        const lastID = localStorage.getItem('trip_LastUserID');
+        currentUserID = globalUsers.find(u => u.id === lastID) ? lastID : globalUsers[0].id;
+        
+        loadUserCloudData();
+        renderUserDropdown();
+        updateTitle();
+    }
+
+    function loadUserCloudData() {
+        const hist = cloudBuffer.find(d => d.userID === currentUserID && d.type === 'history');
+        const locs = cloudBuffer.find(d => d.userID === currentUserID && d.type === 'locations');
+        
+        currentUserData.history = hist ? JSON.parse(hist.content) : [];
+        currentUserData.locations = locs ? JSON.parse(locs.content) : [
+            { name: '南方實作基地', addr: '台南市新營區大同路32號' },
+            { name: '雲嘉南分署', addr: '台南市官田區工業路40號' }
+        ];
+        renderHistory();
+        renderLocations();
+    }
+
+    async function saveToCloud(type, contentObj) {
+        const user = globalUsers.find(u => u.id === currentUserID);
+        await apiCall('POST', {
+            userID: currentUserID,
+            userName: user.name,
+            type: type,
+            content: JSON.stringify(contentObj)
+        });
+    }
+
+    // --- 成員管理 ---
+    function renderUserDropdown() {
+        const dropdown = document.getElementById('userDropdown'); dropdown.innerHTML = '';
+        globalUsers.forEach(user => { 
+            const opt = new Option(user.name, user.id); 
+            if (user.id === currentUserID) opt.selected = true;
+            dropdown.add(opt); 
+        });
+    }
 
     function switchUser() {
         currentUserID = document.getElementById('userDropdown').value;
         localStorage.setItem('trip_LastUserID', currentUserID);
-        loadCurrentUserData();
-        renderUserDropdown();
-        renderHistory();
-        renderLocations();
+        loadUserCloudData();
         updateTitle();
     }
 
-    function loadCurrentUserData() {
-        const raw = localStorage.getItem('tripData_' + currentUserID);
-        currentUserData = raw ? JSON.parse(raw) : { history: [], locations: [{ name: '南方實作基地', addr: '台南市新營區大同路32號' }, { name: '勞動部勞動力發展署雲嘉南分署', addr: '台南市官田區工業路40號' }] };
+    async function addNewUser() {
+        const name = prompt("輸入新成員姓名：");
+        if (name?.trim()) {
+            const newId = 'user_' + Date.now();
+            globalUsers.push({ id: newId, name: name.trim() });
+            currentUserID = newId;
+            await saveToCloud('history', []); // 初始化
+            location.reload(); 
+        }
     }
 
-    function saveCurrentUserData() { localStorage.setItem('tripData_' + currentUserID, JSON.stringify(currentUserData)); }
+    async function renameUser() {
+        const user = globalUsers.find(u => u.id === currentUserID);
+        const name = prompt("修改姓名：", user.name);
+        if (name?.trim()) {
+            user.name = name.trim();
+            await saveToCloud('history', currentUserData.history);
+            renderUserDropdown();
+            updateTitle();
+        }
+    }
 
+    // --- 地點與紀錄 ---
+    async function addLocation() {
+        const name = document.getElementById('newPlaceName').value.trim();
+        const addr = document.getElementById('newPlaceAddr').value.trim();
+        if(name && addr) {
+            currentUserData.locations.push({ name, addr });
+            await saveToCloud('locations', currentUserData.locations);
+            renderLocations();
+            document.getElementById('newPlaceName').value = '';
+            document.getElementById('newPlaceAddr').value = '';
+        }
+    }
+
+    async function submitToHistory() {
+        const content = document.getElementById('output').value;
+        if (!content || content.includes('預覽')) return alert('請產生內容');
+        const dateMatch = content.match(/\d+年\d+月\d+日/);
+        const dateLabel = dateMatch ? dateMatch[0] : "紀錄";
+        currentUserData.history.unshift({ dateLabel, content });
+        await saveToCloud('history', currentUserData.history);
+        renderHistory();
+        navigator.clipboard.writeText(content);
+        alert('已存入雲端並複製！');
+    }
+
+    async function deleteHistory(e, index) {
+        e.stopPropagation();
+        if(confirm('刪除？')) {
+            currentUserData.history.splice(index, 1);
+            await saveToCloud('history', currentUserData.history);
+            renderHistory();
+        }
+    }
+
+    async function deleteLocation(e, index) {
+        e.stopPropagation();
+        if(confirm('刪除地點？')) {
+            currentUserData.locations.splice(index, 1);
+            await saveToCloud('locations', currentUserData.locations);
+            renderLocations();
+        }
+    }
+
+    // --- UI Helper (維持原有的邏輯) ---
     function renderLocations() {
         const container = document.getElementById('quickDestContainer');
         container.innerHTML = '';
@@ -154,58 +276,26 @@
             const fullStr = `${loc.name} (${loc.addr})`;
             const tag = document.createElement('div');
             tag.className = 'btn-tag';
-            tag.innerHTML = `
-                <div class="tag-main" onclick="setField('destInput', '${fullStr}')">${loc.name}</div>
-                <div class="tag-to-start" onclick="setField('startPoint', '${fullStr}')" title="設為起點">📍</div>
-                <div class="del-tag" onclick="deleteLocation(event, ${index})">×</div>
-            `;
+            tag.innerHTML = `<div class="tag-main" onclick="setField('destInput', '${fullStr}')">${loc.name}</div><div class="tag-to-start" onclick="setField('startPoint', '${fullStr}')">📍</div><div class="del-tag" onclick="deleteLocation(event, ${index})">×</div>`;
             container.appendChild(tag);
         });
     }
 
-    function setField(fieldId, val) { document.getElementById(fieldId).value = val; }
-
-    function addLocation() {
-        const name = document.getElementById('newPlaceName').value.trim();
-        const addr = document.getElementById('newPlaceAddr').value.trim();
-        if(name && addr) {
-            currentUserData.locations.push({ name, addr });
-            document.getElementById('newPlaceName').value = '';
-            document.getElementById('newPlaceAddr').value = '';
-            saveCurrentUserData(); renderLocations();
-        }
+    function renderHistory() {
+        const list = document.getElementById('historyList'); list.innerHTML = '';
+        currentUserData.history.forEach((rec, index) => {
+            const div = document.createElement('div'); div.className = `history-item`;
+            div.onclick = () => { document.getElementById('output').value = rec.content; };
+            div.innerHTML = `${rec.dateLabel} <button class="btn-del-mini" onclick="deleteHistory(event, ${index})">×</button>`;
+            list.appendChild(div);
+        });
     }
 
-    function deleteLocation(e, index) {
-        e.stopPropagation();
-        if(confirm('確定刪除？')) { currentUserData.locations.splice(index, 1); saveCurrentUserData(); renderLocations(); }
+    function updateTitle() { 
+        const u = globalUsers.find(u => u.id === currentUserID);
+        document.getElementById('mainTitle').innerText = `南方實作基地TRIP快手 (${u ? u.name : ''})`; 
     }
 
-    // --- 以下為維持不變的邏輯 ---
-    function renderUserDropdown() {
-        const dropdown = document.getElementById('userDropdown'); dropdown.innerHTML = '';
-        globalUsers.forEach(user => { const opt = new Option(user.name, user.id); if (user.id === currentUserID) opt.selected = true; dropdown.add(opt); });
-    }
-    function addNewUser() { const name = prompt("姓名："); if (name?.trim()) { const newId = 'user_' + Date.now(); globalUsers.push({ id: newId, name: name.trim() }); saveUserList(); currentUserID = newId; switchUser(); } }
-    function renameUser() { const user = globalUsers.find(u => u.id === currentUserID); const name = prompt("改名：", user.name); if (name?.trim()) { user.name = name.trim(); saveUserList(); renderUserDropdown(); updateTitle(); } }
-    function deleteUser() { if (globalUsers.length <= 1 || !confirm("確定刪除？")) return; globalUsers = globalUsers.filter(u => u.id !== currentUserID); currentUserID = globalUsers[0].id; saveUserList(); switchUser(); }
-    function saveUserList() { localStorage.setItem('trip_UserList', JSON.stringify(globalUsers)); localStorage.setItem('trip_LastUserID', currentUserID); }
-    function updateTitle() { document.getElementById('mainTitle').innerText = `南方實作基地TRIP快手 (${globalUsers.find(u => u.id === currentUserID).name})`; }
-    function toggleAdmin() { const box = document.getElementById('adminBox'); box.style.display = (box.style.display === 'block') ? 'none' : 'block'; }
-    function smartFormatDest(el) {
-        let val = el.value.trim();
-        if ((val.includes('市') || val.includes('縣')) && val.length > 8) {
-            val = val.replace(/\d{3,6}/, '').trim();
-            const cityKeywords = ["台南", "臺南", "嘉義", "雲林", "台北", "臺北", "台中", "臺中", "桃園", "新竹", "苗栗", "彰化", "南投", "屏東", "宜蘭", "花蓮", "台東", "臺東", "基隆", "新北", "高雄"];
-            let splitIndex = -1;
-            cityKeywords.forEach(kw => { let idx = val.lastIndexOf(kw); if (idx > splitIndex) splitIndex = idx; });
-            if (splitIndex > 0) {
-                let namePart = val.substring(0, splitIndex).trim();
-                let addrPart = val.substring(splitIndex).trim();
-                if (!namePart.includes('(')) el.value = `${namePart} (${addrPart})`;
-            }
-        }
-    }
     function generate() {
         let name = document.getElementById('tripType').value;
         if(name === '辦理聯繫會議') name = `辦理${document.getElementById('monthInput').value}月份聯繫會議`;
@@ -221,26 +311,24 @@
         let lunchText = document.getElementById('minusLunch').checked ? " (含午休 1 小時)" : "";
         const type = hours <= 2 ? "公出" : "出差";
         document.getElementById('output').value = `${type}名稱：${name}\n活動時間：${date} ${actT}\n${type}時間：${tripT} (共 ${hours} 小時${lunchText})\n${type}地點：${destFull}\n行經路線：${startFull} > ${destFull} > ${startFull}\n最遠距離：${km.toFixed(1)} KM\n總公里數：${(km * 2).toFixed(1)} KM\n路程統計：單程車程公里數 ${km.toFixed(1)} km，單程車程時間約 ${driveT} 分鐘。`;
-        currentEditIndex = null; updateHistoryActiveStates();
     }
-    function submitToHistory() {
-        const content = document.getElementById('output').value; if (!content || content.includes('預覽')) return alert('請產生內容');
-        const dateMatch = content.match(/\d+年\d+月\d+日/); const dateLabel = dateMatch ? dateMatch[0] : "未定義";
-        if (currentEditIndex !== null) currentUserData.history[currentEditIndex] = { dateLabel, content };
-        else currentUserData.history.unshift({ dateLabel, content });
-        saveCurrentUserData(); renderHistory(); navigator.clipboard.writeText(content); alert('已儲存並複製！');
+
+    function setField(fieldId, val) { document.getElementById(fieldId).value = val; }
+    function toggleAdmin() { const box = document.getElementById('adminBox'); box.style.display = (box.style.display === 'block') ? 'none' : 'block'; }
+    function smartFormatDest(el) {
+        let val = el.value.trim();
+        if ((val.includes('市') || val.includes('縣')) && val.length > 8) {
+            val = val.replace(/\d{3,6}/, '').trim();
+            const cityKeywords = ["台南", "臺南", "嘉義", "雲林", "台北", "臺北", "台中", "臺中", "桃園", "新竹", "苗栗", "彰化", "南投", "屏東", "宜蘭", "花蓮", "台東", "臺東", "基隆", "新北", "高雄"];
+            let splitIndex = -1;
+            cityKeywords.forEach(kw => { let idx = val.lastIndexOf(kw); if (idx > splitIndex) splitIndex = idx; });
+            if (splitIndex > 0) {
+                let namePart = val.substring(0, splitIndex).trim();
+                let addrPart = val.substring(splitIndex).trim();
+                if (!namePart.includes('(')) el.value = `${namePart} (${addrPart})`;
+            }
+        }
     }
-    function renderHistory() {
-        const list = document.getElementById('historyList'); list.innerHTML = '';
-        currentUserData.history.forEach((rec, index) => {
-            const div = document.createElement('div'); div.className = `history-item ${currentEditIndex === index ? 'active' : ''}`;
-            div.onclick = () => { currentEditIndex = index; document.getElementById('output').value = rec.content; updateHistoryActiveStates(); };
-            div.innerHTML = `${rec.dateLabel} <button class="btn-del-mini" onclick="deleteHistory(event, ${index})">×</button>`;
-            list.appendChild(div);
-        });
-    }
-    function deleteHistory(e, index) { e.stopPropagation(); if(confirm('刪除？')) { currentUserData.history.splice(index, 1); saveCurrentUserData(); renderHistory(); } }
-    function updateHistoryActiveStates() { document.querySelectorAll('.history-item').forEach((item, idx) => item.classList.toggle('active', idx === currentEditIndex)); }
     function fillTimeDropdowns() {
         const hs = ["04","05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24"]; const ms = ["00","15","30","45"];
         ["actS", "actE", "tripS", "tripE"].forEach(id => { hs.forEach(h => document.getElementById(id + "_H").add(new Option(h, h))); ms.forEach(m => document.getElementById(id + "_M").add(new Option(m, m))); });
@@ -252,7 +340,8 @@
     function toggleMonthInput() { const v = document.getElementById('tripType').value; document.getElementById('monthDiv').style.display = (v === '辦理聯繫會議') ? 'block' : 'none'; document.getElementById('customTrip').style.display = (v === 'custom') ? 'block' : 'none'; }
     function openGoogleMaps() { const s = document.getElementById('startPoint').value, d = document.getElementById('destInput').value; if(!s || !d) return alert('請填寫起點與目的地'); window.open(`https://www.google.com/maps/dir/${encodeURIComponent(s)}/${encodeURIComponent(d)}`, '_blank'); }
 
-    fillTimeDropdowns(); switchUser();
+    fillTimeDropdowns();
+    init(); // 啟動雲端同步
 </script>
 </body>
 </html>
