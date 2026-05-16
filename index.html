@@ -71,6 +71,75 @@
         .btn-mgmt:hover { background: #2a2a2a; color: var(--white); }
         .btn-mgmt.danger:hover { color: #f87171; border-color: #f87171; }
 
+        /* ── 月份篩選器 ── */
+        .month-filter-section {
+            padding: 14px 20px 10px;
+            border-bottom: 1px solid #2a2a2a;
+        }
+        .month-filter-label {
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            color: #555;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .month-filter-row {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+        .month-filter-row select {
+            background: #1e1e1e;
+            color: var(--white);
+            border: 1px solid #333;
+            border-radius: 6px;
+            padding: 6px 8px;
+            font-size: 12px;
+            outline: none;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .month-filter-row select:hover { border-color: #555; }
+        .month-filter-row select:focus { border-color: var(--green); }
+        #filterYear { flex: 2; }
+        #filterMonth { flex: 1.5; }
+        .btn-month-all {
+            flex: 1;
+            padding: 6px 4px;
+            font-size: 11px;
+            background: #1e1e1e;
+            color: #888;
+            border: 1px solid #333;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.15s;
+            white-space: nowrap;
+        }
+        .btn-month-all:hover { background: #2a2a2a; color: var(--white); }
+        .btn-month-all.active { background: var(--green); color: var(--black); border-color: var(--green); font-weight: 700; }
+
+        /* 月份統計 badge */
+        .month-stats {
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .stats-badge {
+            font-size: 11px;
+            color: #666;
+        }
+        .stats-count {
+            background: #1e1e1e;
+            color: var(--green);
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            border: 1px solid #333;
+        }
+
         .sidebar-section-title {
             padding: 14px 20px 8px;
             font-size: 10px;
@@ -78,6 +147,9 @@
             letter-spacing: 0.12em;
             color: #555;
             text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
         .history-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
         .history-item {
@@ -93,6 +165,18 @@
             transition: 0.15s;
         }
         .history-item:hover { background: #222; border-left-color: var(--green); color: var(--white); }
+        .history-item-month {
+            font-size: 10px;
+            color: #555;
+            margin-bottom: 2px;
+        }
+        .history-empty {
+            padding: 16px 12px;
+            color: #444;
+            font-size: 12px;
+            text-align: center;
+            line-height: 1.6;
+        }
         .btn-del-mini {
             position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
             color: #555; background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px;
@@ -293,7 +377,38 @@
             <button class="btn-mgmt danger" onclick="deleteUser()">刪除</button>
         </div>
     </div>
-    <div class="sidebar-section-title">歷史紀錄</div>
+
+    <!-- ── 月份篩選器 ── -->
+    <div class="month-filter-section">
+        <div class="month-filter-label">📅 月份篩選</div>
+        <div class="month-filter-row">
+            <select id="filterYear" onchange="renderHistory()"></select>
+            <select id="filterMonth" onchange="renderHistory()">
+                <option value="1">1月</option>
+                <option value="2">2月</option>
+                <option value="3">3月</option>
+                <option value="4">4月</option>
+                <option value="5">5月</option>
+                <option value="6">6月</option>
+                <option value="7">7月</option>
+                <option value="8">8月</option>
+                <option value="9">9月</option>
+                <option value="10">10月</option>
+                <option value="11">11月</option>
+                <option value="12">12月</option>
+            </select>
+            <button class="btn-month-all" id="btnShowAll" onclick="toggleShowAll()">全部</button>
+        </div>
+        <div class="month-stats">
+            <span class="stats-badge">本月筆數</span>
+            <span class="stats-count" id="monthCount">0</span>
+        </div>
+    </div>
+
+    <div class="sidebar-section-title">
+        <span>歷史紀錄</span>
+        <span id="filterIndicator" style="font-size:10px; color: var(--green); font-weight:600;"></span>
+    </div>
     <div class="history-list" id="historyList"></div>
 </div>
 
@@ -422,10 +537,44 @@
     let globalUsers = [];
     let currentUserID = "";
     let currentUserData = { history: [], locations: [] };
+    let showAllMonths = false;
+
+    // ── 初始化年份選單（民國）──
+    function initYearFilter() {
+        const now = new Date();
+        const currentRocYear = now.getFullYear() - 1911;
+        const sel = document.getElementById('filterYear');
+        sel.innerHTML = '';
+        for (let y = currentRocYear; y >= currentRocYear - 5; y--) {
+            const opt = new Option(y + '年', y);
+            sel.appendChild(opt);
+        }
+        sel.value = currentRocYear;
+        // 設定月份為當月
+        document.getElementById('filterMonth').value = now.getMonth() + 1;
+    }
+
+    function getFilterYear() { return parseInt(document.getElementById('filterYear').value); }
+    function getFilterMonth() { return parseInt(document.getElementById('filterMonth').value); }
+
+    function toggleShowAll() {
+        showAllMonths = !showAllMonths;
+        const btn = document.getElementById('btnShowAll');
+        btn.classList.toggle('active', showAllMonths);
+        renderHistory();
+    }
+
+    // ── 從 dateLabel 解析年月（支援「113年5月20日 (一)」格式）──
+    function parseLabelYearMonth(label) {
+        const m = label.match(/(\d{2,3})年(\d{1,2})月/);
+        if (m) return { year: parseInt(m[1]), month: parseInt(m[2]) };
+        return null;
+    }
 
     async function init() {
         fillTimeDropdowns();
         setTodayDate();
+        initYearFilter();
         await loadAllData();
     }
 
@@ -539,13 +688,10 @@
         }
     }
 
-    // ── 地址格式化：支援直接貼上 Google Maps 格式 ──
+    // ── 地址格式化 ──
     function smartFormatDest(el) {
         let val = el.value.trim();
         if (!val) return;
-
-        // 偵測 Google Maps 貼上格式：「名稱 郵遞區號地址」
-        // 例：國立嘉義高級工業職業學校 600嘉義市東區短竹里彌陀路174號
         const gmapsPattern = /^(.+?)\s+(\d{3,6})([台臺嘉雲台高屏宜花東基新桃竹苗彰南投].+)$/;
         const gmMatch = val.match(gmapsPattern);
         if (gmMatch) {
@@ -554,14 +700,9 @@
             el.value = name + ' (' + addr + ')';
             return;
         }
-
-        // 偵測已有括號格式，不再處理
         if (val.includes('(') && val.includes(')')) return;
-
-        // 一般過濾贅詞
         const filterList = ["國立", "私立", "財團法人", "行政院", "教育部", "勞動部"];
         filterList.forEach(word => { val = val.replaceAll(word, ""); });
-
         if ((val.includes('市') || val.includes('縣')) && val.length > 5) {
             val = val.replace(/^\d{3,5}/, '').trim();
             const cityKeywords = ["台南","臺南","嘉義","雲林","台北","臺北","台中","臺中","桃園","新竹","苗栗","彰化","南投","屏東","宜蘭","花蓮","台東","臺東","基隆","新北","高雄","台南市","嘉義市","雲林縣"];
@@ -595,14 +736,59 @@
         });
     }
 
+    // ── 渲染歷史紀錄（加入月份篩選）──
     function renderHistory() {
         const list = document.getElementById('historyList');
         list.innerHTML = '';
-        currentUserData.history.forEach((rec, index) => {
+
+        const filterY = getFilterYear();
+        const filterM = getFilterMonth();
+
+        // 過濾
+        const filtered = showAllMonths
+            ? currentUserData.history
+            : currentUserData.history.filter(rec => {
+                const ym = parseLabelYearMonth(rec.dateLabel);
+                if (!ym) {
+                    // 舊資料沒有年月資訊：嘗試從 rocYear/rocMonth 欄位讀取
+                    if (rec.rocYear && rec.rocMonth) {
+                        return parseInt(rec.rocYear) === filterY && parseInt(rec.rocMonth) === filterM;
+                    }
+                    return false; // 無法判斷則不顯示
+                }
+                return ym.year === filterY && ym.month === filterM;
+            });
+
+        // 更新 badge 和標題提示
+        document.getElementById('monthCount').textContent = filtered.length;
+
+        const indicator = document.getElementById('filterIndicator');
+        if (showAllMonths) {
+            indicator.textContent = '全部 ' + currentUserData.history.length + ' 筆';
+        } else {
+            indicator.textContent = filterY + '年' + filterM + '月';
+        }
+
+        if (filtered.length === 0) {
+            list.innerHTML = '<div class="history-empty">' +
+                (showAllMonths ? '尚無任何紀錄' : filterY + '年' + filterM + '月<br>尚無出差紀錄') +
+                '</div>';
+            return;
+        }
+
+        filtered.forEach((rec) => {
+            // 找到在 history 中的原始 index（用於刪除）
+            const originalIndex = currentUserData.history.indexOf(rec);
             const div = document.createElement('div');
             div.className = 'history-item';
             div.onclick = () => { document.getElementById('output').value = rec.content; };
-            div.innerHTML = rec.dateLabel + ' <button class="btn-del-mini" onclick="deleteHistory(event, ' + index + ')">×</button>';
+
+            // 如果是全部模式，顯示月份小標籤
+            const ym = parseLabelYearMonth(rec.dateLabel);
+            const monthTag = (showAllMonths && ym) ? '<div class="history-item-month">' + ym.year + '年' + ym.month + '月</div>' : '';
+
+            div.innerHTML = monthTag + rec.dateLabel +
+                ' <button class="btn-del-mini" onclick="deleteHistory(event, ' + originalIndex + ')">×</button>';
             list.appendChild(div);
         });
     }
@@ -675,14 +861,39 @@
             '路程統計：單程車程公里數 ' + km.toFixed(1) + ' km，單程車程時間約 ' + driveT + ' 分鐘。';
     }
 
+    // ── 送出紀錄（加入 rocYear / rocMonth metadata）──
     async function submitToHistory() {
         const content = document.getElementById('output').value;
         if (!content || content.includes('預覽')) return alert('請先產生預覽內容');
-        const dateMatch = content.match(/\d+年\d+月\d+日/);
-        const dateLabel = dateMatch ? dateMatch[0] : '紀錄 ' + new Date().toLocaleTimeString();
-        currentUserData.history.unshift({ dateLabel, content });
+
+        // 解析 dateLabel
+        const dateMatch = content.match(/(\d{2,3})年(\d{1,2})月(\d{1,2})日/);
+        let dateLabel, rocYear, rocMonth;
+
+        if (dateMatch) {
+            rocYear = parseInt(dateMatch[1]);
+            rocMonth = parseInt(dateMatch[2]);
+            // 保留完整含星期格式（從 dateStr 欄位取）
+            const fullDateMatch = content.match(/\d{2,3}年\d{1,2}月\d{1,2}日[^\n]*/);
+            dateLabel = fullDateMatch ? fullDateMatch[0].trim() : dateMatch[0];
+        } else {
+            dateLabel = '紀錄 ' + new Date().toLocaleTimeString();
+            rocYear = null;
+            rocMonth = null;
+        }
+
+        currentUserData.history.unshift({ dateLabel, rocYear, rocMonth, content });
         if (currentUserData.history.length > 30) currentUserData.history.pop();
         await saveToCloud('history', currentUserData.history);
+
+        // 送出後，自動切換篩選到該筆所屬月份
+        if (rocYear && rocMonth) {
+            document.getElementById('filterYear').value = rocYear;
+            document.getElementById('filterMonth').value = rocMonth;
+            showAllMonths = false;
+            document.getElementById('btnShowAll').classList.remove('active');
+        }
+
         renderHistory();
         navigator.clipboard.writeText(content).then(() => alert('已存入雲端並複製內容！'));
     }
