@@ -359,10 +359,10 @@
                 <label>交通方式</label>
                 <select id="transportType" onchange="toggleTransportFee()">
                     <option value="公務車">🚙 公務車（不計交通費）</option>
-                    <option value="機車">🛵 機車（交通費=總公里數x2）</option>
-                    <option value="汽車">🚗 汽車（交通費=總公里數x3）</option>
-                    <option value="火車">🚆 火車（提供票據或截圖）</option>
-                    <option value="公車">🚌 公車（提供票據或截圖）</option>
+                    <option value="機車">🛵 機車</option>
+                    <option value="汽車">🚗 汽車</option>
+                    <option value="火車">🚆 火車</option>
+                    <option value="公車">🚌 公車</option>
                     <option value="其他">✏️ 其他</option>
                 </select>
             </div>
@@ -717,8 +717,53 @@ function showOverlay(show){document.getElementById('syncOverlay').style.display=
 function renderUserDropdown(){const d=document.getElementById('userDropdown');d.innerHTML='';globalUsers.forEach(u=>{const o=new Option(u.name,u.id);if(u.id===currentUserID)o.selected=true;d.add(o);});}
 async function switchUser(){currentUserID=document.getElementById('userDropdown').value;localStorage.setItem('trip_LastUserID',currentUserID);await loadAllData();}
 async function addNewUser(){const name=prompt("輸入新成員姓名：");if(!name||!name.trim())return;const newId='user_'+Date.now();globalUsers.push({id:newId,name:name.trim()});localStorage.setItem('trip_Users',JSON.stringify(globalUsers));currentUserID=newId;localStorage.setItem('trip_LastUserID',newId);currentUserData={history:[],locations:[{name:'南方實作基地',addr:'台南市新營區大同路32號'},{name:'勞動部勞動力發展署雲嘉南分署',addr:'台南市官田區二鎮里工業路40號'}],tripTypes:['辦理工作坊課程','辦理專案展售','辦理講座課程','辦理企業參訪','辦理聯繫會議'],personnel:[],uniforms:['灰色','黑色','紫色','綠色']};await saveToCloud('history',[]);await saveToCloud('locations',currentUserData.locations);await saveToCloud('tripTypes',currentUserData.tripTypes);await saveToCloud('uniforms',currentUserData.uniforms);renderUserDropdown();renderHistory();renderLocations();updateTitle();renderMultiselDropdown('tripType');renderMultiselDropdown('personnel');renderMultiselDropdown('uniform');alert('已新增成員「'+name.trim()+'」');}
-async function renameUser(){const user=globalUsers.find(u=>u.id===currentUserID);const name=prompt("修改姓名：",user.name);if(name&&name.trim()){user.name=name.trim();localStorage.setItem('trip_Users',JSON.stringify(globalUsers));await saveToCloud('history',currentUserData.history);renderUserDropdown();updateTitle();}}
-async function deleteUser(){if(globalUsers.length<=1)return alert('至少需要保留一位成員');if(confirm('確定刪除此使用者？')){globalUsers=globalUsers.filter(u=>u.id!==currentUserID);localStorage.setItem('trip_Users',JSON.stringify(globalUsers));currentUserID=globalUsers[0].id;localStorage.setItem('trip_LastUserID',currentUserID);await loadAllData();}}
+async function renameUser(){
+    const user=globalUsers.find(u=>u.id===currentUserID);
+    if(!user)return;
+    const name=prompt("修改姓名：",user.name);
+    if(!name||!name.trim())return;
+    user.name=name.trim();
+    localStorage.setItem('trip_Users',JSON.stringify(globalUsers));
+    // 重存所有類型以讓雲端 userName 欄位更新
+    await saveToCloud('history',currentUserData.history);
+    await saveToCloud('locations',currentUserData.locations);
+    await saveToCloud('tripTypes',currentUserData.tripTypes||[]);
+    await saveToCloud('personnel',currentUserData.personnel||[]);
+    await saveToCloud('uniforms',currentUserData.uniforms||[]);
+    renderUserDropdown();
+    updateTitle();
+    alert('姓名已更新為「'+user.name+'」');
+}
+async function deleteUser(){
+    if(globalUsers.length<=1)return alert('至少需要保留一位成員');
+    if(!confirm('確定刪除此使用者及其所有資料？'))return;
+    globalUsers=globalUsers.filter(u=>u.id!==currentUserID);
+    localStorage.setItem('trip_Users',JSON.stringify(globalUsers));
+    currentUserID=globalUsers[0].id;
+    localStorage.setItem('trip_LastUserID',currentUserID);
+    // 切換到第一位使用者並重新拉取其資料（不依賴舊 currentUserID）
+    showOverlay(true);
+    try {
+        const res=await fetch(GAS_URL+"?t="+Date.now());
+        const data=await res.json();
+        const hist=data.find(d=>d.userID===currentUserID&&d.type==='history');
+        const locs=data.find(d=>d.userID===currentUserID&&d.type==='locations');
+        const tts =data.find(d=>d.userID===currentUserID&&d.type==='tripTypes');
+        const pers=data.find(d=>d.userID===currentUserID&&d.type==='personnel');
+        const unif=data.find(d=>d.userID===currentUserID&&d.type==='uniforms');
+        currentUserData.history  =hist?JSON.parse(hist.content):[];
+        currentUserData.locations=locs?JSON.parse(locs.content):[{name:'南方實作基地',addr:'台南市新營區大同路32號'},{name:'勞動部勞動力發展署雲嘉南分署',addr:'台南市官田區二鎮里工業路40號'}];
+        currentUserData.tripTypes=tts ?JSON.parse(tts.content) :['辦理工作坊課程','辦理專案展售','辦理講座課程','辦理企業參訪','辦理聯繫會議'];
+        currentUserData.personnel=pers?JSON.parse(pers.content):[];
+        currentUserData.uniforms =unif?JSON.parse(unif.content):['灰色','黑色','紫色','綠色'];
+    } catch(e){ console.error(e); }
+    showOverlay(false);
+    // 清空所有複選狀態
+    Object.keys(multiselState).forEach(k=>multiselState[k].clear());
+    renderUserDropdown(); renderHistory(); renderLocations(); updateTitle();
+    renderMultiselDropdown('tripType'); renderMultiselDropdown('personnel'); renderMultiselDropdown('uniform');
+    Object.keys(multiselConfig).forEach(k=>renderMultiselDisplay(k));
+}
 
 function smartFormatDest(el){let val=el.value.trim();if(!val)return;const gm=/^(.+?)\s+(\d{3,6})([台臺嘉雲高屏宜花東基新桃竹苗彰南投].+)$/.exec(val);if(gm){el.value=gm[1].trim()+' ('+gm[3].trim()+')';return;}if(val.includes('(')&&val.includes(')'))return;['國立','私立','財團法人','行政院','教育部','勞動部'].forEach(w=>{val=val.replaceAll(w,'');});if((val.includes('市')||val.includes('縣'))&&val.length>5){val=val.replace(/^\d{3,6}/,'').trim();const kws=['台南','臺南','嘉義','雲林','台北','臺北','台中','臺中','桃園','新竹','苗栗','彰化','南投','屏東','宜蘭','花蓮','台東','臺東','基隆','新北','高雄'];let si=-1;kws.forEach(k=>{let i=val.indexOf(k);if(i!==-1&&(si===-1||i<si))si=i;});if(si>0){let n=val.substring(0,si).trim();let a=val.substring(si).trim();if(!n.includes('('))el.value=n+' ('+a+')';}else if(si===0){el.value=val;}}}
 
@@ -761,6 +806,7 @@ function generate(){
         '交通方式：'+feeNote+'\n'+
         '單程里程：'+km.toFixed(1)+' KM\n'+
         '總公里數：'+(km*2).toFixed(1)+' KM\n'+
+        '路程統計：單程車程公里數 '+km.toFixed(1)+'km，單程車程時間約'+driveT+'分鐘\n'+
         '出差人員：'+(personnel.length?personnel.join('、'):'（未選擇）')+'\n'+
         '出差制服：'+(uniforms.length?uniforms.join('、'):'（未選擇）');
 }
