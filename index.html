@@ -1,471 +1,487 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TRIP 快手 — 南方實作基地</title>
-    <style>
-        :root {
-            --green: #6ee64b;
-            --black: #0f0f0f;
-            --white: #ffffff;
-            --gray: #f4f4f4;
-            --gray2: #e8e8e8;
-            --gray3: #aaaaaa;
-            --text: #1a1a1a;
-            --purple: #7c3aed;
-            --sidebar-w: 260px;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: system-ui, -apple-system, sans-serif; background: var(--gray); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TRIP 快手 — 南方實作基地</title>
+    <style>
+        :root {
+            --green: #6ee64b;
+            --black: #0f0f0f;
+            --white: #ffffff;
+            --gray: #f4f4f4;
+            --gray2: #e8e8e8;
+            --gray3: #aaaaaa;
+            --text: #1a1a1a;
+            --purple: #7c3aed;
+            --sidebar-w: 260px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--gray); color: var(--text); display: flex; height: 100vh; overflow: hidden; font-size: 14px; }
 
-        /* ── SIDEBAR ── */
-        .sidebar { width: var(--sidebar-w); background: var(--black); color: var(--white); display: flex; flex-direction: column; flex-shrink: 0; }
-        .sidebar-top { padding: 24px 20px 16px; border-bottom: 1px solid #2a2a2a; }
-        .sidebar-logo { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; color: var(--green); text-transform: uppercase; margin-bottom: 16px; }
-        .sidebar-title { font-size: 18px; font-weight: 800; line-height: 1.2; margin-bottom: 16px; }
-        .user-selector { width: 100%; padding: 8px 10px; background: #1e1e1e; color: var(--white); border: 1px solid #333; border-radius: 6px; font-size: 13px; margin-bottom: 8px; }
-        .mgmt-btns { display: flex; gap: 6px; }
-        .btn-mgmt { flex: 1; padding: 5px 4px; font-size: 11px; background: #1e1e1e; color: #aaa; border: 1px solid #333; border-radius: 5px; cursor: pointer; transition: 0.15s; }
-        .btn-mgmt:hover { background: #2a2a2a; color: var(--white); }
-        .btn-mgmt.danger:hover { color: #f87171; border-color: #f87171; }
+        /* ── SIDEBAR ── */
+        .sidebar { width: var(--sidebar-w); background: var(--black); color: var(--white); display: flex; flex-direction: column; flex-shrink: 0; }
+        .sidebar-top { padding: 24px 20px 16px; border-bottom: 1px solid #2a2a2a; }
+        .sidebar-logo { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; color: var(--green); text-transform: uppercase; margin-bottom: 16px; }
+        .sidebar-title { font-size: 18px; font-weight: 800; line-height: 1.2; margin-bottom: 16px; }
+        .user-selector { width: 100%; padding: 8px 10px; background: #1e1e1e; color: var(--white); border: 1px solid #333; border-radius: 6px; font-size: 13px; margin-bottom: 8px; }
+        .mgmt-btns { display: flex; gap: 6px; }
+        .btn-mgmt { flex: 1; padding: 5px 4px; font-size: 11px; background: #1e1e1e; color: #aaa; border: 1px solid #333; border-radius: 5px; cursor: pointer; transition: 0.15s; }
+        .btn-mgmt:hover { background: #2a2a2a; color: var(--white); }
+        .btn-mgmt.danger:hover { color: #f87171; border-color: #f87171; }
 
-        /* ── 月份篩選器 ── */
-        .month-filter-section { padding: 14px 20px 10px; border-bottom: 1px solid #2a2a2a; }
-        .month-filter-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #555; text-transform: uppercase; margin-bottom: 8px; }
-        .month-filter-row { display: flex; gap: 6px; align-items: center; }
-        .month-filter-row select { background: #1e1e1e; color: var(--white); border: 1px solid #333; border-radius: 6px; padding: 6px 8px; font-size: 12px; outline: none; cursor: pointer; transition: 0.15s; }
-        .month-filter-row select:focus { border-color: var(--green); }
-        #filterYear { flex: 2; } #filterMonth { flex: 1.5; }
-        .btn-month-all { flex: 1; padding: 6px 4px; font-size: 11px; background: #1e1e1e; color: #888; border: 1px solid #333; border-radius: 5px; cursor: pointer; transition: 0.15s; white-space: nowrap; }
-        .btn-month-all:hover { background: #2a2a2a; color: var(--white); }
-        .btn-month-all.active { background: var(--green); color: var(--black); border-color: var(--green); font-weight: 700; }
-        .month-stats { margin-top: 8px; display: flex; align-items: center; gap: 6px; }
-        .stats-badge { font-size: 11px; color: #666; }
-        .stats-count { background: #1e1e1e; color: var(--green); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; border: 1px solid #333; }
-        .sidebar-section-title { padding: 14px 20px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #555; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; }
-        .history-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
-        .history-item { background: #1a1a1a; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; position: relative; font-size: 12px; color: #ccc; border-left: 3px solid transparent; transition: 0.15s; }
-        .history-item:hover { background: #222; border-left-color: var(--green); color: var(--white); }
-        .history-item-month { font-size: 10px; color: #555; margin-bottom: 2px; }
-        .history-empty { padding: 16px 12px; color: #444; font-size: 12px; text-align: center; line-height: 1.6; }
-        .btn-del-mini { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #555; background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px; }
-        .btn-del-mini:hover { color: #f87171; }
+        /* ── 月份篩選器 ── */
+        .month-filter-section { padding: 14px 20px 10px; border-bottom: 1px solid #2a2a2a; }
+        .month-filter-label { font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #555; text-transform: uppercase; margin-bottom: 8px; }
+        .month-filter-row { display: flex; gap: 6px; align-items: center; }
+        .month-filter-row select { background: #1e1e1e; color: var(--white); border: 1px solid #333; border-radius: 6px; padding: 6px 8px; font-size: 12px; outline: none; cursor: pointer; transition: 0.15s; }
+        .month-filter-row select:focus { border-color: var(--green); }
+        #filterYear { flex: 2; } #filterMonth { flex: 1.5; }
+        .btn-month-all { flex: 1; padding: 6px 4px; font-size: 11px; background: #1e1e1e; color: #888; border: 1px solid #333; border-radius: 5px; cursor: pointer; transition: 0.15s; white-space: nowrap; }
+        .btn-month-all:hover { background: #2a2a2a; color: var(--white); }
+        .btn-month-all.active { background: var(--green); color: var(--black); border-color: var(--green); font-weight: 700; }
+        .month-stats { margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+        .stats-badge { font-size: 11px; color: #666; }
+        .stats-count { background: #1e1e1e; color: var(--green); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 20px; border: 1px solid #333; }
+        .sidebar-section-title { padding: 14px 20px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #555; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; }
+        .history-list { flex: 1; overflow-y: auto; padding: 0 12px 12px; }
+        .history-item { background: #1a1a1a; border-radius: 8px; padding: 10px 12px; margin-bottom: 6px; cursor: pointer; position: relative; font-size: 12px; color: #ccc; border-left: 3px solid transparent; transition: 0.15s; }
+        .history-item:hover { background: #222; border-left-color: var(--green); color: var(--white); }
+        .history-item-month { font-size: 10px; color: #555; margin-bottom: 2px; }
+        .history-empty { padding: 16px 12px; color: #444; font-size: 12px; text-align: center; line-height: 1.6; }
+        .btn-del-mini { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); color: #555; background: none; border: none; font-size: 16px; cursor: pointer; padding: 4px; }
+        .btn-del-mini:hover { color: #f87171; }
 
-        /* ── MAIN ── */
-        .main-content { flex: 1; overflow-y: auto; padding: 28px 32px; }
-        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-        .page-title { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
-        .page-title span { color: var(--green); }
-        .badge { background: var(--green); color: var(--black); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.05em; }
-        .card { background: var(--white); border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; border: 1px solid var(--gray2); }
-        .card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--gray3); text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
-        .card-title::after { content: ''; flex: 1; height: 1px; background: var(--gray2); }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-        label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 4px; }
-        input, select, textarea { width: 100%; padding: 8px 10px; border: 1.5px solid var(--gray2); border-radius: 7px; font-size: 13px; color: var(--text); background: var(--white); transition: border 0.15s; outline: none; }
-        input:focus, select:focus, textarea:focus { border-color: var(--black); }
-        .time-group { display: flex; align-items: center; gap: 4px; }
-        .time-group select { width: 68px; }
-        .time-sep { color: #aaa; font-weight: 600; padding: 0 2px; }
+        /* ── MAIN ── */
+        .main-content { flex: 1; overflow-y: auto; padding: 28px 32px; }
+        .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+        .page-title { font-size: 26px; font-weight: 900; letter-spacing: -0.5px; }
+        .page-title span { color: var(--green); }
+        .badge { background: var(--green); color: var(--black); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; letter-spacing: 0.05em; }
+        .card { background: var(--white); border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; border: 1px solid var(--gray2); }
+        .card-title { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--gray3); text-transform: uppercase; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .card-title::after { content: ''; flex: 1; height: 1px; background: var(--gray2); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+        label { display: block; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 4px; }
+        input, select, textarea { width: 100%; padding: 8px 10px; border: 1.5px solid var(--gray2); border-radius: 7px; font-size: 13px; color: var(--text); background: var(--white); transition: border 0.15s; outline: none; }
+        input:focus, select:focus, textarea:focus { border-color: var(--black); }
+        .time-group { display: flex; align-items: center; gap: 4px; }
+        .time-group select { width: 68px; }
+        .time-sep { color: #aaa; font-weight: 600; padding: 0 2px; }
 
-        /* ── 日曆彈出 ── */
-        .date-input-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
-        .date-input-wrap input { flex: 1; }
-        .btn-cal { flex-shrink: 0; width: 34px; height: 34px; background: var(--gray); border: 1.5px solid var(--gray2); border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; transition: 0.15s; padding: 0; }
-        .btn-cal:hover { background: var(--gray2); }
-        .cal-popup { position: absolute; top: calc(100% + 6px); left: 0; z-index: 999; background: var(--white); border: 1.5px solid var(--gray2); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 12px; min-width: 230px; display: none; }
-        .cal-popup.open { display: block; }
-        .cal-ym-row { display: flex; gap: 4px; margin-bottom: 8px; }
-        .cal-ym-row select { padding: 4px 6px; font-size: 12px; border-radius: 5px; }
-        .cal-nav { background: none; border: none; width: 26px; height: 26px; border-radius: 5px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 0; }
-        .cal-nav:hover { background: var(--gray2); }
-        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
-        .cal-dow { font-size: 10px; font-weight: 700; color: #aaa; padding: 3px 0; }
-        .cal-day { font-size: 12px; padding: 5px 2px; border-radius: 5px; cursor: pointer; transition: 0.12s; border: none; background: none; }
-        .cal-day:hover { background: var(--gray); }
-        .cal-day.today { background: var(--gray2); font-weight: 700; }
-        .cal-day.selected { background: var(--black) !important; color: var(--green) !important; font-weight: 700; }
-        .cal-day.empty { cursor: default; }
-        .cal-day.sun { color: #ef4444; }
-        .cal-day.sat { color: #3b82f6; }
+        /* ── 日曆彈出 ── */
+        .date-input-wrap { position: relative; display: flex; align-items: center; gap: 6px; }
+        .date-input-wrap input { flex: 1; }
+        .btn-cal { flex-shrink: 0; width: 34px; height: 34px; background: var(--gray); border: 1.5px solid var(--gray2); border-radius: 7px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; transition: 0.15s; padding: 0; }
+        .btn-cal:hover { background: var(--gray2); }
+        .cal-popup { position: absolute; top: calc(100% + 6px); left: 0; z-index: 999; background: var(--white); border: 1.5px solid var(--gray2); border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); padding: 12px; min-width: 230px; display: none; }
+        .cal-popup.open { display: block; }
+        .cal-ym-row { display: flex; gap: 4px; margin-bottom: 8px; }
+        .cal-ym-row select { padding: 4px 6px; font-size: 12px; border-radius: 5px; }
+        .cal-nav { background: none; border: none; width: 26px; height: 26px; border-radius: 5px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .cal-nav:hover { background: var(--gray2); }
+        .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; text-align: center; }
+        .cal-dow { font-size: 10px; font-weight: 700; color: #aaa; padding: 3px 0; }
+        .cal-day { font-size: 12px; padding: 5px 2px; border-radius: 5px; cursor: pointer; transition: 0.12s; border: none; background: none; }
+        .cal-day:hover { background: var(--gray); }
+        .cal-day.today { background: var(--gray2); font-weight: 700; }
+        .cal-day.selected { background: var(--black) !important; color: var(--green) !important; font-weight: 700; }
+        .cal-day.empty { cursor: default; }
+        .cal-day.sun { color: #ef4444; }
+        .cal-day.sat { color: #3b82f6; }
 
-        /* ── 多選下拉 ── */
-        .multisel-wrap { position: relative; }
-        .multisel-display {
-            min-height: 36px;
-            padding: 5px 32px 5px 10px;
-            border: 1.5px solid var(--gray2);
-            border-radius: 7px;
-            font-size: 13px;
-            cursor: pointer;
-            background: var(--white);
-            display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            align-items: center;
-            transition: border 0.15s;
-            position: relative;
-        }
-        .multisel-display:hover { border-color: #bbb; }
-        .multisel-display.open { border-color: var(--black); }
-        .multisel-display::after {
-            content: '▾';
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #aaa;
-            font-size: 12px;
-            pointer-events: none;
-        }
-        .sel-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 3px;
-            background: var(--black);
-            color: var(--green);
-            border-radius: 4px;
-            font-size: 11px;
-            font-weight: 700;
-            padding: 2px 6px;
-        }
-        .sel-chip-x { cursor: pointer; opacity: 0.6; font-size: 12px; line-height: 1; }
-        .sel-chip-x:hover { opacity: 1; }
-        .sel-placeholder { color: #bbb; font-size: 13px; }
-        .multisel-dropdown {
-            position: absolute;
-            top: calc(100% + 4px);
-            left: 0; right: 0;
-            z-index: 500;
-            background: var(--white);
-            border: 1.5px solid var(--gray2);
-            border-radius: 8px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-            display: none;
-            max-height: 220px;
-            overflow-y: auto;
-        }
-        .multisel-dropdown.open { display: block; }
-        .multisel-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
-            cursor: pointer;
-            font-size: 13px;
-            transition: 0.12s;
-            border-bottom: 1px solid var(--gray);
-        }
-        .multisel-item:last-child { border-bottom: none; }
-        .multisel-item:hover { background: var(--gray); }
-        .multisel-item.selected { background: #f0fde8; }
-        .multisel-item .chk {
-            width: 16px; height: 16px;
-            border: 2px solid var(--gray2);
-            border-radius: 4px;
-            display: flex; align-items: center; justify-content: center;
-            flex-shrink: 0;
-            transition: 0.12s;
-            font-size: 10px;
-        }
-        .multisel-item.selected .chk { background: var(--black); border-color: var(--black); color: var(--green); }
-        .multisel-item-del { margin-left: auto; color: #ccc; font-size: 14px; font-weight: 700; padding: 0 4px; cursor: pointer; }
-        .multisel-item-del:hover { color: #ef4444; }
+        /* ── 多選下拉（活動名稱 / 人員 / 制服）── */
+        .multisel-wrap { position: relative; }
+        .multisel-display {
+            min-height: 36px;
+            padding: 5px 32px 5px 10px;
+            border: 1.5px solid var(--gray2);
+            border-radius: 7px;
+            font-size: 13px;
+            cursor: pointer;
+            background: var(--white);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+            transition: border 0.15s;
+            position: relative;
+        }
+        .multisel-display:hover { border-color: #bbb; }
+        .multisel-display.open { border-color: var(--black); }
+        .multisel-display::after {
+            content: '▾';
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #aaa;
+            font-size: 12px;
+            pointer-events: none;
+        }
+        .sel-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            background: var(--black);
+            color: var(--green);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 6px;
+        }
+        .sel-chip-x { cursor: pointer; opacity: 0.6; font-size: 12px; line-height: 1; }
+        .sel-chip-x:hover { opacity: 1; }
+        .sel-placeholder { color: #bbb; font-size: 13px; }
+        .multisel-dropdown {
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0; right: 0;
+            z-index: 500;
+            background: var(--white);
+            border: 1.5px solid var(--gray2);
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            display: none;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .multisel-dropdown.open { display: block; }
+        .multisel-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: 0.12s;
+            border-bottom: 1px solid var(--gray);
+        }
+        .multisel-item:last-child { border-bottom: none; }
+        .multisel-item:hover { background: var(--gray); }
+        .multisel-item.selected { background: #f0fde8; }
+        .multisel-item .chk {
+            width: 16px; height: 16px;
+            border: 2px solid var(--gray2);
+            border-radius: 4px;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            transition: 0.12s;
+            font-size: 10px;
+        }
+        .multisel-item.selected .chk { background: var(--black); border-color: var(--black); color: var(--green); }
+        .multisel-item-del { margin-left: auto; color: #ccc; font-size: 14px; font-weight: 700; padding: 0 4px; cursor: pointer; }
+        .multisel-item-del:hover { color: #ef4444; }
 
-        /* ── 管理抽屜 ── */
-        .admin-toggle { font-size: 12px; color: #888; cursor: pointer; text-decoration: none; margin: 10px 0 6px; display: inline-flex; align-items: center; gap: 4px; }
-        .admin-toggle:hover { color: var(--black); }
-        .admin-box { background: var(--gray); padding: 10px; border-radius: 8px; display: none; margin-bottom: 6px; border: 1.5px solid var(--gray2); }
-        .admin-box-inner { display: flex; gap: 6px; }
+        /* ── 管理抽屜（管理選項） ── */
+        .admin-toggle { font-size: 12px; color: #888; cursor: pointer; text-decoration: none; margin: 10px 0 6px; display: inline-flex; align-items: center; gap: 4px; }
+        .admin-toggle:hover { color: var(--black); }
+        .admin-box { background: var(--gray); padding: 10px; border-radius: 8px; display: none; margin-bottom: 6px; border: 1.5px solid var(--gray2); }
+        .admin-box-inner { display: flex; gap: 6px; }
 
-        /* ── 小型按鈕 ── */
-        .btn-inline-primary, .btn-inline-secondary {
-            flex-shrink: 0;
-            padding: 8px 12px;
-            font-size: 12px;
-            font-weight: 700;
-            border-radius: 7px;
-            border: 1.5px solid transparent;
-            white-space: nowrap;
-            transition: 0.15s;
-        }
-        .btn-inline-primary { background: var(--black); color: var(--white); }
-        .btn-inline-primary:hover { background: #222; }
-        .btn-inline-secondary { background: var(--gray); color: #666; border-color: var(--gray2); }
-        .btn-inline-secondary:hover { background: var(--gray2); color: var(--text); }
+        /* ── 小型行內按鈕（統一尺寸；黑＝會新增/儲存資料，灰＝輔助查詢） ── */
+        .btn-inline-primary, .btn-inline-secondary {
+            flex-shrink: 0;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 7px;
+            border: 1.5px solid transparent;
+            white-space: nowrap;
+            transition: 0.15s;
+        }
+        .btn-inline-primary { background: var(--black); color: var(--white); }
+        .btn-inline-primary:hover { background: #222; }
+        .btn-inline-secondary { background: var(--gray); color: #666; border-color: var(--gray2); }
+        .btn-inline-secondary:hover { background: var(--gray2); color: var(--text); }
 
-        /* ── 地點選擇器與行經路線 ── */
-        .loc-field { margin-bottom: 14px; }
-        .loc-field-label-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
-        .loc-field-label-row label { margin-bottom: 0; }
-        .loc-addr-row { display: flex; gap: 6px; margin-top: 6px; }
-        .loc-addr-row input { flex: 1; }
-        .loc-hint { font-size: 11px; color: #aaa; margin-top: 5px; line-height: 1.5; }
-        .dest-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
-        .dest-item { display: flex; align-items: center; gap: 8px; background: var(--gray); border: 1.5px solid var(--gray2); border-radius: 7px; padding: 6px 10px; font-size: 12px; }
-        .dest-order-input { flex-shrink: 0; width: 30px; height: 24px; padding: 0 4px; text-align: center; font-size: 12px; font-weight: 700; background: var(--black); color: var(--green); border: none; border-radius: 5px; }
-        .dest-name-input { flex: 1; min-width: 0; height: 24px; border: 1.5px solid transparent; background: transparent; font-size: 12px; padding: 0 6px; color: var(--text); border-radius: 5px; font-family: inherit; }
-        .dest-name-input:hover { border-color: var(--gray2); }
-        .dest-name-input:focus { background: var(--white); border-color: var(--black); outline: none; }
-        .dest-arrows { flex-shrink: 0; display: flex; gap: 3px; }
-        .dest-arrow-btn { width: 24px; height: 24px; padding: 0; font-size: 11px; line-height: 1; background: var(--white); border: 1.5px solid var(--gray2); color: #777; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
-        .dest-arrow-btn:hover:not(:disabled) { background: var(--gray2); color: var(--text); }
-        .dest-arrow-btn:disabled { opacity: 0.3; cursor: default; }
-        .dest-item .dest-remove { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #bbb; font-weight: 700; cursor: pointer; }
-        .dest-item .dest-remove:hover { color: #ef4444; }
-        .loc-manage-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
-        .loc-manage-item { display: flex; align-items: center; gap: 8px; background: var(--white); border: 1.5px solid var(--gray2); border-radius: 6px; padding: 6px 10px; font-size: 12px; }
-        .loc-manage-item .lm-name { font-weight: 700; flex-shrink: 0; }
-        .loc-manage-item .lm-addr { color: #888; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .loc-manage-item .lm-del { flex-shrink: 0; color: #ccc; font-weight: 700; cursor: pointer; padding: 0 4px; }
-        .loc-manage-item .lm-del:hover { color: #ef4444; }
-        
-        .route-preview { font-size: 12px; color: #666; background: var(--gray); border-radius: 9px; padding: 12px 14px; margin-top: 8px; }
-        .route-empty { color: #aaa; }
-        .route-stop { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); font-weight: 600; padding: 3px 0; }
-        .route-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--black); }
-        .route-connector { display: flex; align-items: center; gap: 6px; margin: 4px 0 4px 4px; padding-left: 13px; position: relative; }
-        .route-connector-line { flex-shrink: 0; width: 2px; align-self: stretch; min-height: 24px; background: var(--gray2); position: absolute; left: 4px; top: -4px; bottom: -4px; }
-        .route-seg-select { flex-shrink: 0; max-width: 180px; height: 28px; padding: 4px 6px; font-size: 12px; border: 1.5px solid var(--gray2); border-radius: 6px; background: var(--white); color: #555; }
-        .route-seg-select:focus { border-color: var(--black); }
-        .route-seg-fee { flex-shrink: 0; width: 80px; height: 28px; padding: 4px 6px; font-size: 12px; border: 1.5px solid var(--gray2); border-radius: 6px; }
+        /* ── 地點選擇器（出發地/目的地/回程地共用） ── */
+        .loc-field { margin-bottom: 14px; }
+        .loc-field-label-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 4px; }
+        .loc-field-label-row label { margin-bottom: 0; }
+        .loc-addr-row { display: flex; gap: 6px; margin-top: 6px; }
+        .loc-addr-row input { flex: 1; }
+        .loc-hint { font-size: 11px; color: #aaa; margin-top: 5px; line-height: 1.5; }
+        .dest-list { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+        .dest-item { display: flex; align-items: center; gap: 8px; background: var(--gray); border: 1.5px solid var(--gray2); border-radius: 7px; padding: 6px 10px; font-size: 12px; }
+        .dest-order-input { flex-shrink: 0; width: 30px; height: 24px; padding: 0 4px; text-align: center; font-size: 12px; font-weight: 700; background: var(--black); color: var(--green); border: none; border-radius: 5px; }
+        .dest-name-input { flex: 1; min-width: 0; height: 24px; border: 1.5px solid transparent; background: transparent; font-size: 12px; padding: 0 6px; color: var(--text); border-radius: 5px; font-family: inherit; }
+        .dest-name-input:hover { border-color: var(--gray2); }
+        .dest-name-input:focus { background: var(--white); border-color: var(--black); outline: none; }
+        .dest-arrows { flex-shrink: 0; display: flex; gap: 3px; }
+        .dest-arrow-btn { width: 24px; height: 24px; padding: 0; font-size: 11px; line-height: 1; background: var(--white); border: 1.5px solid var(--gray2); color: #777; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+        .dest-arrow-btn:hover:not(:disabled) { background: var(--gray2); color: var(--text); }
+        .dest-arrow-btn:disabled { opacity: 0.3; cursor: default; }
+        .dest-item .dest-remove { flex-shrink: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; color: #bbb; font-weight: 700; cursor: pointer; }
+        .dest-item .dest-remove:hover { color: #ef4444; }
+        .loc-manage-list { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; max-height: 160px; overflow-y: auto; }
+        .loc-manage-item { display: flex; align-items: center; gap: 8px; background: var(--white); border: 1.5px solid var(--gray2); border-radius: 6px; padding: 6px 10px; font-size: 12px; }
+        .loc-manage-item .lm-name { font-weight: 700; flex-shrink: 0; }
+        .loc-manage-item .lm-addr { color: #888; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .loc-manage-item .lm-del { flex-shrink: 0; color: #ccc; font-weight: 700; cursor: pointer; padding: 0 4px; }
+        .loc-manage-item .lm-del:hover { color: #ef4444; }
+        .route-preview { font-size: 12px; color: #666; background: var(--gray); border-radius: 9px; padding: 12px 14px; margin-top: 8px; }
+        .route-empty { color: #aaa; }
+        .route-stop { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); font-weight: 600; padding: 3px 0; }
+        .route-dot { flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; background: var(--black); }
+        .route-connector { display: flex; align-items: center; gap: 6px; margin: 4px 0 4px 4px; padding-left: 13px; position: relative; }
+        .route-connector-line { flex-shrink: 0; width: 2px; align-self: stretch; min-height: 24px; background: var(--gray2); position: absolute; left: 4px; top: -4px; bottom: -4px; }
+        .route-seg-select { flex-shrink: 0; max-width: 180px; height: 28px; padding: 4px 6px; font-size: 12px; border: 1.5px solid var(--gray2); border-radius: 6px; background: var(--white); color: #555; }
+        .route-seg-select:focus { border-color: var(--black); }
+        .route-seg-fee { flex-shrink: 0; width: 80px; height: 28px; padding: 4px 6px; font-size: 12px; border: 1.5px solid var(--gray2); border-radius: 6px; }
 
-        /* buttons */
-        button { cursor: pointer; border: none; border-radius: 7px; padding: 9px 16px; font-weight: 700; font-size: 13px; transition: 0.15s; }
-        .btn-map { background: var(--gray); color: var(--text); width: 100%; margin-top: 10px; border: 1.5px solid var(--gray2); display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-map:hover { background: var(--gray2); }
-        .btn-gen { background: var(--black); color: var(--white); width: 100%; font-size: 14px; padding: 12px; border-radius: 8px; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-gen:hover { background: #222; }
-        .btn-gen .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; display: inline-block; }
-        .btn-submit { background: var(--purple); color: var(--white); width: 100%; font-size: 14px; padding: 12px; border-radius: 8px; margin-top: 10px; }
-        .btn-submit:hover { background: #6d28d9; }
-        #output { width: 100%; min-height: 220px; background: var(--gray); padding: 14px; border-radius: 8px; margin-top: 14px; border: 1.5px dashed var(--gray2); font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.7; color: var(--text); resize: vertical; }
+        /* buttons */
+        button { cursor: pointer; border: none; border-radius: 7px; padding: 9px 16px; font-weight: 700; font-size: 13px; transition: 0.15s; }
+        .btn-map { background: var(--gray); color: var(--text); width: 100%; margin-top: 10px; border: 1.5px solid var(--gray2); display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-map:hover { background: var(--gray2); }
+        .btn-gen { background: var(--black); color: var(--white); width: 100%; font-size: 14px; padding: 12px; border-radius: 8px; margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-gen:hover { background: #222; }
+        .btn-gen .dot { width: 8px; height: 8px; background: var(--green); border-radius: 50%; display: inline-block; }
+        .btn-submit { background: var(--purple); color: var(--white); width: 100%; font-size: 14px; padding: 12px; border-radius: 8px; margin-top: 10px; }
+        .btn-submit:hover { background: #6d28d9; }
+        #output { width: 100%; min-height: 220px; background: var(--gray); padding: 14px; border-radius: 8px; margin-top: 14px; border: 1.5px dashed var(--gray2); font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.7; color: var(--text); resize: vertical; }
 
-        #syncOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-weight: 800; font-size: 16px; color: var(--black); gap: 8px; }
-        .overlay-dot { width: 10px; height: 10px; background: var(--green); border-radius: 50%; animation: pulse 0.8s infinite alternate; }
-        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.6); } }
-        .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; font-weight: 500; margin-top: 6px; cursor: pointer; }
-        .checkbox-label input { width: auto; }
-        .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
-    </style>
+        #syncOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.85); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-weight: 800; font-size: 16px; color: var(--black); gap: 8px; }
+        .overlay-dot { width: 10px; height: 10px; background: var(--green); border-radius: 50%; animation: pulse 0.8s infinite alternate; }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.6); } }
+        .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; font-weight: 500; margin-top: 6px; cursor: pointer; }
+        .checkbox-label input { width: auto; }
+        .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+    </style>
 </head>
 <body>
 
 <div id="syncOverlay"><div class="overlay-dot"></div>雲端同步中</div>
 
 <div class="sidebar">
-    <div class="sidebar-top">
-        <div class="sidebar-logo">南方實作基地</div>
-        <div class="sidebar-title" id="mainTitle">TRIP<br>快手</div>
-        <select id="userDropdown" class="user-selector" onchange="switchUser()"></select>
-        <div class="mgmt-btns">
-            <button class="btn-mgmt" onclick="renameUser()">✏️ 改名</button>
-            <button class="btn-mgmt" onclick="addNewUser()">＋ 新增</button>
-            <button class="btn-mgmt danger" onclick="deleteUser()">刪除</button>
-        </div>
-    </div>
-    <div class="month-filter-section">
-        <div class="month-filter-label">📅 月份篩選</div>
-        <div class="month-filter-row">
-            <select id="filterYear" onchange="renderHistory()"></select>
-            <select id="filterMonth" onchange="renderHistory()">
-                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
-                <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
-                <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
-                <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
-            </select>
-            <button class="btn-month-all" id="btnShowAll" onclick="toggleShowAll()">全部</button>
-        </div>
-        <div class="month-stats"><span class="stats-badge">本月筆數</span><span class="stats-count" id="monthCount">0</span></div>
-    </div>
-    <div class="sidebar-section-title">
-        <span>歷史紀錄</span>
-        <span id="filterIndicator" style="font-size:10px; color: var(--green); font-weight:600;"></span>
-    </div>
-    <div class="history-list" id="historyList"></div>
+    <div class="sidebar-top">
+        <div class="sidebar-logo">南方實作基地</div>
+        <div class="sidebar-title" id="mainTitle">TRIP<br>快手</div>
+        <select id="userDropdown" class="user-selector" onchange="switchUser()"></select>
+        <div class="mgmt-btns">
+            <button class="btn-mgmt" onclick="renameUser()">✏️ 改名</button>
+            <button class="btn-mgmt" onclick="addNewUser()">＋ 新增</button>
+            <button class="btn-mgmt danger" onclick="deleteUser()">刪除</button>
+        </div>
+    </div>
+    <div class="month-filter-section">
+        <div class="month-filter-label">📅 月份篩選</div>
+        <div class="month-filter-row">
+            <select id="filterYear" onchange="renderHistory()"></select>
+            <select id="filterMonth" onchange="renderHistory()">
+                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+            </select>
+            <button class="btn-month-all" id="btnShowAll" onclick="toggleShowAll()">全部</button>
+        </div>
+        <div class="month-stats"><span class="stats-badge">本月筆數</span><span class="stats-count" id="monthCount">0</span></div>
+    </div>
+    <div class="sidebar-section-title">
+        <span>歷史紀錄</span>
+        <span id="filterIndicator" style="font-size:10px; color: var(--green); font-weight:600;"></span>
+    </div>
+    <div class="history-list" id="historyList"></div>
 </div>
 
 <div class="main-content">
-    <div class="page-header">
-        <div class="page-title">出差紀錄 <span>快速填寫</span></div>
-        <div class="badge">TRIP TOOL</div>
-    </div>
+    <div class="page-header">
+        <div class="page-title">出差紀錄 <span>快速填寫</span></div>
+        <div class="badge">TRIP TOOL</div>
+    </div>
 
-    <div class="card">
-        <div class="card-title">活動資訊</div>
-        <div class="grid" style="margin-bottom:12px;">
-            <div>
-                <label>活動名稱（可複選）</label>
-                <div class="multisel-wrap" id="tripTypeWrap">
-                    <div class="multisel-display" id="tripTypeDisplay" onclick="toggleMultisel('tripType')">
-                        <span class="sel-placeholder" id="tripTypePlaceholder">請選擇活動名稱…</span>
-                    </div>
-                    <div class="multisel-dropdown" id="tripTypeDropdown"></div>
-                </div>
-                <span class="admin-toggle" onclick="toggleBox('tripTypeAdminBox')">⚙ 管理活動名稱</span>
-                <div id="tripTypeAdminBox" class="admin-box">
-                    <div class="admin-box-inner">
-                        <input type="text" id="newTripTypeName" placeholder="新增活動名稱" style="flex:1;">
-                        <button class="btn-inline-primary" onclick="addTripType()">新增</button>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <label>活動日期（輸入：年/月/日，自動代入星期）</label>
-                <div class="date-input-wrap" style="position:relative;">
-                    <button class="btn-cal" onclick="toggleCal(event)" type="button" title="開啟日曆">📅</button>
-                    <input type="text" id="dateStr" placeholder="例如: 113/5/20" onblur="formatDateWithDay(this)">
-                    <div class="cal-popup" id="calPopup">
-                        <div class="cal-ym-row">
-                            <select id="calYear" onchange="renderCal()"></select>
-                            <select id="calMonth" onchange="renderCal()">
-                                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
-                                <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
-                                <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
-                                <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
-                            </select>
-                            <button class="cal-nav" onclick="calNav(-1)">‹</button>
-                            <button class="cal-nav" onclick="calNav(1)">›</button>
-                        </div>
-                        <div class="cal-grid" id="calGrid"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- ── 活動資訊 ── -->
+    <div class="card">
+        <div class="card-title">活動資訊</div>
 
-        <div class="grid">
-            <div>
-                <label>活動時間（公務）</label>
-                <div class="time-group">
-                    <select id="actS_H"></select><span class="time-sep">:</span><select id="actS_M"></select>
-                    <span class="time-sep">～</span>
-                    <select id="actE_H"></select><span class="time-sep">:</span><select id="actE_M"></select>
-                </div>
-            </div>
-            <div>
-                <label>出差時間（含交通）</label>
-                <div class="time-group">
-                    <select id="tripS_H"></select><span class="time-sep">:</span><select id="tripS_M"></select>
-                    <span class="time-sep">～</span>
-                    <select id="tripE_H"></select><span class="time-sep">:</span><select id="tripE_M"></select>
-                </div>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="minusLunch" checked> 含午休扣除（1小時）
-                </label>
-            </div>
-        </div>
-    </div>
+        <!-- 活動名稱 + 活動日期：同一列 -->
+        <div class="grid" style="margin-bottom:12px;">
+            <div>
+                <label>活動名稱（可複選）</label>
+                <!-- 多選下拉 -->
+                <div class="multisel-wrap" id="tripTypeWrap">
+                    <div class="multisel-display" id="tripTypeDisplay" onclick="toggleMultisel('tripType')">
+                        <span class="sel-placeholder" id="tripTypePlaceholder">請選擇活動名稱…</span>
+                    </div>
+                    <div class="multisel-dropdown" id="tripTypeDropdown"></div>
+                </div>
+                <!-- 管理 -->
+                <span class="admin-toggle" onclick="toggleBox('tripTypeAdminBox')">⚙ 管理活動名稱</span>
+                <div id="tripTypeAdminBox" class="admin-box">
+                    <div class="admin-box-inner">
+                        <input type="text" id="newTripTypeName" placeholder="新增活動名稱" style="flex:1;">
+                        <button class="btn-inline-primary" onclick="addTripType()">新增</button>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <label>活動日期（輸入：年/月/日，自動代入星期）</label>
+                <div class="date-input-wrap" style="position:relative;">
+                    <button class="btn-cal" onclick="toggleCal(event)" type="button" title="開啟日曆">📅</button>
+                    <input type="text" id="dateStr" placeholder="例如: 113/5/20" onblur="formatDateWithDay(this)">
+                    <div class="cal-popup" id="calPopup">
+                        <div class="cal-ym-row">
+                            <select id="calYear" onchange="renderCal()"></select>
+                            <select id="calMonth" onchange="renderCal()">
+                                <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                                <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                                <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                                <option value="10">10月</option><option value="11">11月</option><option value="12">12月</option>
+                            </select>
+                            <button class="cal-nav" onclick="calNav(-1)">‹</button>
+                            <button class="cal-nav" onclick="calNav(1)">›</button>
+                        </div>
+                        <div class="cal-grid" id="calGrid"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-    <div class="card">
-        <div class="card-title">地點與交通</div>
-        <div class="loc-field">
-            <div class="loc-field-label-row"><label>出發地</label></div>
-            <select id="startSelect" onchange="onStartSelectChange()"></select>
-            <div class="loc-addr-row">
-                <input type="text" id="startCustom" placeholder="或貼上 / 輸入自訂地址" oninput="updateRoutePreview()">
-                <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('startCustom')">🔍 查地圖</button>
-            </div>
-        </div>
+        <!-- 時間 -->
+        <div class="grid">
+            <div>
+                <label>活動時間（公務）</label>
+                <div class="time-group">
+                    <select id="actS_H"></select><span class="time-sep">:</span><select id="actS_M"></select>
+                    <span class="time-sep">～</span>
+                    <select id="actE_H"></select><span class="time-sep">:</span><select id="actE_M"></select>
+                </div>
+            </div>
+            <div>
+                <label>出差時間（含交通）</label>
+                <div class="time-group">
+                    <select id="tripS_H"></select><span class="time-sep">:</span><select id="tripS_M"></select>
+                    <span class="time-sep">～</span>
+                    <select id="tripE_H"></select><span class="time-sep">:</span><select id="tripE_M"></select>
+                </div>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="minusLunch" checked> 含午休扣除（1小時）
+                </label>
+            </div>
+        </div>
+    </div>
 
-        <div class="loc-field">
-            <div class="loc-field-label-row"><label>目的地（可新增多筆，依序排列行程）</label></div>
-            <div class="loc-addr-row">
-                <select id="destSelect" style="flex:1;"></select>
-                <button type="button" class="btn-inline-primary" onclick="addDestFromSelect()">＋加入行程</button>
-            </div>
-            <div class="loc-addr-row">
-                <input type="text" id="destCustom" placeholder="或貼上 / 輸入自訂地址">
-                <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('destCustom')">🔍 查地圖</button>
-                <button type="button" class="btn-inline-primary" onclick="addCustomDestAsStop()">＋加入行程</button>
-            </div>
-            <div class="dest-list" id="destOrderedList"></div>
-        </div>
+    <!-- ── 地點與交通 ── -->
+    <div class="card">
+        <div class="card-title">地點與交通</div>
 
-        <div class="loc-field">
-            <div class="loc-field-label-row"><label>回程地（留空＝視為與出發地相同）</label></div>
-            <select id="returnSelect" onchange="onReturnSelectChange()">
-                <option value="">（與出發地相同）</option>
-            </select>
-            <div class="loc-addr-row">
-                <input type="text" id="returnCustom" placeholder="或貼上 / 輸入自訂地址" oninput="updateRoutePreview()">
-                <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('returnCustom')">🔍 查地圖</button>
-            </div>
-        </div>
+        <!-- 出發地 -->
+        <div class="loc-field">
+            <div class="loc-field-label-row"><label>出發地</label></div>
+            <select id="startSelect" onchange="onStartSelectChange()"></select>
+            <div class="loc-addr-row">
+                <input type="text" id="startCustom" placeholder="或貼上 / 輸入自訂地址（自動清除郵遞區號）" oninput="smartFormatDest(this)">
+                <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('startCustom')">🔍 查地圖</button>
+            </div>
+        </div>
 
-        <span class="admin-toggle" onclick="toggleBox('locAdminBox')">⚙ 管理常用地點</span>
-        <div id="locAdminBox" class="admin-box">
-            <div class="admin-box-inner">
-                <input type="text" id="newPlaceName" placeholder="地點名稱" style="flex:1;">
-                <input type="text" id="newPlaceAddr" placeholder="地址" style="flex:2;">
-                <button class="btn-inline-primary" onclick="addLocation()">新增</button>
-            </div>
-            <div class="loc-manage-list" id="locManageList"></div>
-        </div>
+        <!-- 目的地（下拉新增，可多筆） -->
+        <div class="loc-field">
+            <div class="loc-field-label-row"><label>目的地（可新增多筆，依序排列行程）</label></div>
+            <div class="loc-addr-row">
+                <select id="destSelect" style="flex:1;"></select>
+                <button type="button" class="btn-inline-primary" onclick="addDestFromSelect()">＋加入行程</button>
+            </div>
+            <div class="loc-addr-row">
+                <input type="text" id="destCustom" placeholder="或貼上 / 輸入自訂地址（自動清除郵遞區號）" oninput="smartFormatDest(this)">
+                <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('destCustom')">🔍 查地圖</button>
+                <button type="button" class="btn-inline-primary" onclick="addCustomDestAsStop()">＋加入行程</button>
+            </div>
+            <div class="loc-hint">提示：地標名稱不確定地址時，先打名稱按「🔍 查地圖」會開新分頁顯示「出發地→此地標」的路線查詢，從 Google Maps 複製完整地址貼回上方輸入框即可（會自動清除郵遞區號）。</div>
+            <div class="dest-list" id="destOrderedList"></div>
+        </div>
 
-        <div class="route-preview" id="routePreview"></div>
-        <button class="btn-map" onclick="openGoogleMaps()">📍 開啟 Google Maps 查多點路線</button>
+        <!-- 回程地 -->
+        <div class="loc-field">
+            <div class="loc-field-label-row"><label>回程地（留空＝視為與出發地相同）</label></div>
+            <select id="returnSelect" onchange="onReturnSelectChange()">
+                <option value="">（與出發地相同）</option>
+            </select>
+            <div class="loc-addr-row">
+                <input type="text" id="returnCustom" placeholder="或貼上 / 輸入自訂地址（自動清除郵遞區號）" oninput="smartFormatDest(this)">
+                <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('returnCustom')">🔍 查地圖</button>
+            </div>
+        </div>
 
-        <div class="grid-3" style="margin-top:14px;">
-            <div>
-                <label>單程里程（KM）</label>
-                <input type="number" step="0.1" min="0" id="onewayKm" placeholder="KM">
-            </div>
-            <div>
-                <label>單程車程時間（分鐘）</label>
-                <input type="number" min="0" id="onewayTime" placeholder="分鐘">
-            </div>
-            <div>
-                <label>總公里數（KM，含回程）</label>
-                <input type="number" step="0.1" min="0" id="totalKm" placeholder="KM">
-            </div>
-        </div>
-    </div>
+        <span class="admin-toggle" onclick="toggleBox('locAdminBox')">⚙ 管理常用地點</span>
+        <div id="locAdminBox" class="admin-box">
+            <div class="admin-box-inner">
+                <input type="text" id="newPlaceName" placeholder="地點名稱" style="flex:1;">
+                <input type="text" id="newPlaceAddr" placeholder="地址" style="flex:2;">
+                <button class="btn-inline-primary" onclick="addLocation()">新增</button>
+            </div>
+            <div class="loc-manage-list" id="locManageList"></div>
+        </div>
 
-    <div class="card">
-        <div class="card-title">人員與制服</div>
-        <div class="grid">
-            <div>
-                <label>出差人員（可複選）</label>
-                <div class="multisel-wrap" id="personnelWrap">
-                    <div class="multisel-display" id="personnelDisplay" onclick="toggleMultisel('personnel')">
-                        <span class="sel-placeholder" id="personnelPlaceholder">請選擇人員…</span>
-                    </div>
-                    <div class="multisel-dropdown" id="personnelDropdown"></div>
-                </div>
-                <span class="admin-toggle" onclick="toggleBox('personnelAdminBox')">⚙ 管理人員名單</span>
-                <div id="personnelAdminBox" class="admin-box">
-                    <div class="admin-box-inner">
-                        <input type="text" id="newPersonnelName" placeholder="新增人員姓名" style="flex:1;">
-                        <button class="btn-inline-primary" onclick="addPersonnelOption()">新增</button>
-                    </div>
-                </div>
-            </div>
-            <div>
-                <label>出差制服（可複選）</label>
-                <div class="multisel-wrap" id="uniformWrap">
-                    <div class="multisel-display" id="uniformDisplay" onclick="toggleMultisel('uniform')">
-                        <span class="sel-placeholder" id="uniformPlaceholder">請選擇制服…</span>
-                    </div>
-                    <div class="multisel-dropdown" id="uniformDropdown"></div>
-                </div>
-                <span class="admin-toggle" onclick="toggleBox('uniformAdminBox')">⚙ 管理制服選項</span>
-                <div id="uniformAdminBox" class="admin-box">
-                    <div class="admin-box-inner">
-                        <input type="text" id="newUniformName" placeholder="新增制服顏色/名稱" style="flex:1;">
-                        <button class="btn-inline-primary" onclick="addUniformOption()">新增</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+        <div class="loc-hint" style="margin-top:10px;">交通方式在下方「行經路線」逐段設定，預設為公務車，只需要調整不同的那一段即可。</div>
+        <div class="route-preview" id="routePreview"></div>
 
-    <div class="action-row">
-        <button class="btn-gen" onclick="generate()"><span class="dot"></span> 產生預覽內容</button>
-        <button class="btn-submit" onclick="submitToHistory()">💾 送出並存入紀錄</button>
-    </div>
-    <textarea id="output" placeholder="預覽內容將顯示於此..."></textarea>
+        <button class="btn-map" onclick="openGoogleMaps()">📍 開啟 Google Maps 查多點路線</button>
+
+        <div class="grid-3" style="margin-top:14px;">
+            <div>
+                <label>單程里程（KM）</label>
+                <input type="number" step="0.1" min="0" id="onewayKm" placeholder="KM">
+            </div>
+            <div>
+                <label>單程車程時間（分鐘）</label>
+                <input type="number" min="0" id="onewayTime" placeholder="分鐘">
+            </div>
+            <div>
+                <label>總公里數（KM，含回程）</label>
+                <input type="number" step="0.1" min="0" id="totalKm" placeholder="KM">
+            </div>
+        </div>
+    </div>
+
+    <!-- ── 人員與制服 ── -->
+    <div class="card">
+        <div class="card-title">人員與制服</div>
+        <div class="grid">
+            <!-- 人員 -->
+            <div>
+                <label>出差人員（可複選）</label>
+                <div class="multisel-wrap" id="personnelWrap">
+                    <div class="multisel-display" id="personnelDisplay" onclick="toggleMultisel('personnel')">
+                        <span class="sel-placeholder" id="personnelPlaceholder">請選擇人員…</span>
+                    </div>
+                    <div class="multisel-dropdown" id="personnelDropdown"></div>
+                </div>
+                <span class="admin-toggle" onclick="toggleBox('personnelAdminBox')">⚙ 管理人員名單</span>
+                <div id="personnelAdminBox" class="admin-box">
+                    <div class="admin-box-inner">
+                        <input type="text" id="newPersonnelName" placeholder="新增人員姓名" style="flex:1;">
+                        <button class="btn-inline-primary" onclick="addPersonnelOption()">新增</button>
+                    </div>
+                </div>
+            </div>
+            <!-- 制服 -->
+            <div>
+                <label>出差制服（可複選）</label>
+                <div class="multisel-wrap" id="uniformWrap">
+                    <div class="multisel-display" id="uniformDisplay" onclick="toggleMultisel('uniform')">
+                        <span class="sel-placeholder" id="uniformPlaceholder">請選擇制服…</span>
+                    </div>
+                    <div class="multisel-dropdown" id="uniformDropdown"></div>
+                </div>
+                <span class="admin-toggle" onclick="toggleBox('uniformAdminBox')">⚙ 管理制服選項</span>
+                <div id="uniformAdminBox" class="admin-box">
+                    <div class="admin-box-inner">
+                        <input type="text" id="newUniformName" placeholder="新增制服顏色/名稱" style="flex:1;">
+                        <button class="btn-inline-primary" onclick="addUniformOption()">新增</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="action-row">
+        <button class="btn-gen" onclick="generate()"><span class="dot"></span> 產生預覽內容</button>
+        <button class="btn-submit" onclick="submitToHistory()">💾 送出並存入紀錄</button>
+    </div>
+    <textarea id="output" placeholder="預覽內容將顯示於此..."></textarea>
 </div>
 
 <script>
@@ -475,415 +491,49 @@ let globalUsers = [];
 let currentUserID = "";
 let currentUserData = { history:[], locations:[], tripTypes:[], personnel:[], uniforms:[] };
 let showAllMonths = false;
+let calYear, calMonth;
 
-let routeDestinations = []; 
+// ══ 路線狀態（出發地 / 目的地（多個，有序）／ 回程地） ══
+// 每個地點存成字串："名稱 (地址)" 或自訂文字
+let routeStart = '';       // 出發地（下拉選的值，或自訂文字蓋過）
+let routeReturn = '';      // 回程地（空字串 = 與出發地相同）
+let routeDestinations = []; // 依使用者點選順序排列的目的地陣列
+
+// 逐段交通方式覆蓋：key 為「起點|||終點」字串（內容比對，重新排序也不會跑掉）
+// value: { transport: '公車', fee: 50 } — 未覆蓋的路段就沿用整體交通方式
 let segmentOverrides = {};
 
 const TRANSPORT_OPTIONS = [
-    { value: '公務車', label: '🚙 公務車（不計交通費）' },
-    { value: '機車', label: '🛵 機車(*2)' },
-    { value: '汽車', label: '🚗 汽車(*3)' },
-    { value: '火車', label: '🚆 火車' },
-    { value: '公車', label: '🚌 公車' },
-    { value: '其他', label: '✏️ 其他' }
+    { value: '公務車', label: '🚙 公務車（不計交通費）' },
+    { value: '機車', label: '🛵 機車(*2)' },
+    { value: '汽車', label: '🚗 汽車(*3)' },
+    { value: '火車', label: '🚆 火車' },
+    { value: '公車', label: '🚌 公車' },
+    { value: '其他', label: '✏️ 其他' }
 ];
-
-const multiselState = { tripType: new Set(), personnel: new Set(), uniform: new Set() };
-const multiselConfig = {
-    tripType:  { display:'tripTypeDisplay',  dropdown:'tripTypeDropdown',  placeholder:'tripTypePlaceholder',  dataKey:'tripTypes' },
-    personnel: { display:'personnelDisplay', dropdown:'personnelDropdown', placeholder:'personnelPlaceholder', dataKey:'personnel' },
-    uniform:   { display:'uniformDisplay',   dropdown:'uniformDropdown',   placeholder:'uniformPlaceholder',   dataKey:'uniforms' }
-};
-
-// ══ 頁面初始化 ══
-window.onload = function() {
-    initTimeDropdowns();
-    initFilterDropdowns();
-    mockInitialize(); // 本地模擬資料載入，實務上改為從後端讀取
-};
-
-function initTimeDropdowns() {
-    const hours = ['actS_H', 'actE_H', 'tripS_H', 'tripE_H'];
-    const mins = ['actS_M', 'actE_M', 'tripS_M', 'tripE_M'];
-    hours.forEach(id => {
-        const el = document.getElementById(id);
-        for(let i=0; i<24; i++) {
-            let h = i < 10 ? '0'+i : i;
-            el.options.add(new Option(h, h));
-        }
-    });
-    mins.forEach(id => {
-        const el = document.getElementById(id);
-        for(let i=0; i<60; i+=5) {
-            let m = i < 10 ? '0'+i : i;
-            el.options.add(new Option(m, m));
-        }
-    });
-}
-
-function initFilterDropdowns() {
-    const yearEl = document.getElementById('filterYear');
-    const calYearEl = document.getElementById('calYear');
-    const currentYear = new Date().getFullYear() - 1911; // 民國年
-    for(let y = currentYear + 1; y >= currentYear - 2; y--) {
-        yearEl.options.add(new Option('民國 ' + y + ' 年', y));
-        calYearEl.options.add(new Option('民國 ' + y + ' 年', y));
-    }
-}
-
-// ══ 模擬本地初始狀態與設定 ══
-function mockInitialize() {
-    currentUserData.tripTypes = ['實作基地輔導', '南方市集企劃', '拜訪合作夥伴'];
-    currentUserData.personnel = ['王小明', '李四端', '張美麗'];
-    currentUserData.uniforms = ['綠色基地T', '黑色襯衫', '便服'];
-    currentUserData.locations = [
-        {name: '南方實作基地', addr: '台南市新營區大同路'},
-        {name: '台南市政府', addr: '台南市安平區永華路二段6號'}
-    ];
-    
-    // 更新下拉選單
-    refreshMultiselDropdowns();
-    refreshLocationDropdowns();
-    updateRoutePreview();
-}
-
-// ══ 多選下拉控制邏輯 ══
-function toggleMultisel(key) {
-    const config = multiselConfig[key];
-    const dropdown = document.getElementById(config.dropdown);
-    const display = document.getElementById(config.display);
-    
-    // 關閉其他
-    Object.keys(multiselConfig).forEach(k => {
-        if(k !== key) {
-            document.getElementById(multiselConfig[k].dropdown).classList.remove('open');
-            document.getElementById(multiselConfig[k].display).classList.remove('open');
-        }
-    });
-
-    dropdown.classList.toggle('open');
-    display.classList.toggle('open');
-}
-
-function refreshMultiselDropdowns() {
-    Object.keys(multiselConfig).forEach(key => {
-        const config = multiselConfig[key];
-        const dropdown = document.getElementById(config.dropdown);
-        dropdown.innerHTML = '';
-        
-        const list = currentUserData[config.dataKey] || [];
-        list.forEach(val => {
-            const item = document.createElement('div');
-            item.className = 'multisel-item';
-            if(multiselState[key].has(val)) item.className += ' selected';
-            
-            item.innerHTML = `<div class="chk">✓</div><span>${val}</span>`;
-            item.onclick = (e) => {
-                e.stopPropagation();
-                if(multiselState[key].has(val)) {
-                    multiselState[key].delete(val);
-                } else {
-                    multiselState[key].add(val);
-                }
-                updateMultiselDisplay(key);
-                refreshMultiselDropdowns();
-            };
-            dropdown.appendChild(item);
-        });
-    });
-}
-
-function updateMultiselDisplay(key) {
-    const config = multiselConfig[key];
-    const display = document.getElementById(config.display);
-    display.innerHTML = '';
-    
-    if(multiselState[key].size === 0) {
-        display.innerHTML = `<span class="sel-placeholder">請選擇選項…</span>`;
-        return;
-    }
-    
-    multiselState[key].forEach(val => {
-        const chip = document.createElement('span');
-        chip.className = 'sel-chip';
-        chip.innerHTML = `${val} <span class="sel-chip-x">×</span>`;
-        chip.querySelector('.sel-chip-x').onclick = (e) => {
-            e.stopPropagation();
-            multiselState[key].delete(val);
-            updateMultiselDisplay(key);
-            refreshMultiselDropdowns();
-        };
-        display.appendChild(chip);
-    });
-}
-
-// 點擊空白處關閉下拉與日曆
-document.addEventListener('click', function(e) {
-    Object.keys(multiselConfig).forEach(key => {
-        const wrap = document.getElementById(key + 'Wrap');
-        if(wrap && !wrap.contains(e.target)) {
-            document.getElementById(multiselConfig[key].dropdown).classList.remove('open');
-            document.getElementById(multiselConfig[key].display).classList.remove('open');
-        }
-    });
-    const calPopup = document.getElementById('calPopup');
-    if(calPopup && !calPopup.contains(e.target) && !e.target.classList.contains('btn-cal')) {
-        calPopup.classList.remove('open');
-    }
-});
-
-// ══ 常用地點與行程管理 ══
-function refreshLocationDropdowns() {
-    const starts = document.getElementById('startSelect');
-    const dests = document.getElementById('destSelect');
-    starts.innerHTML = '';
-    dests.innerHTML = '<option value="">--請選擇目的地--</option>';
-    
-    currentUserData.locations.forEach(loc => {
-        const text = `${loc.name} (${loc.addr})`;
-        starts.options.add(new Option(text, text));
-        dests.options.add(new Option(text, text));
-    });
-    updateRoutePreview();
-}
-
-function getFullRouteStops() {
-    const stops = [];
-    const startVal = document.getElementById('startCustom').value.trim() || document.getElementById('startSelect').value;
-    stops.push(startVal);
-    
-    routeDestinations.forEach(d => stops.push(d));
-    
-    const returnVal = document.getElementById('returnCustom').value.trim() || document.getElementById('returnSelect').value || startVal;
-    stops.push(returnVal);
-    return stops;
-}
 
 function segKey(from, to) { return from + '|||' + to; }
 function shortLocLabel(val) { return val.includes('(') ? val.split('(')[0].trim() : val; }
 
+// 取得目前路線上每一段的交通方式與費用（未個別設定的路段，預設為公務車／0元）
 function getAllSegments() {
-    const stops = getFullRouteStops();
-    const segs = [];
-    for (let i = 0; i < stops.length - 1; i++) {
-        const key = segKey(stops[i], stops[i+1]);
-        const ov = segmentOverrides[key];
-        const transport = (ov && ov.transport) ? ov.transport : '公務車';
-        const fee = (transport !== '公務車' && ov) ? (ov.fee || 0) : 0;
-        segs.push({ index: i, from: stops[i], to: stops[i+1], transport, fee });
-    }
-    return segs;
+    const stops = getFullRouteStops();
+    const segs = [];
+    for (let i = 0; i < stops.length - 1; i++) {
+        const key = segKey(stops[i], stops[i+1]);
+        const ov = segmentOverrides[key];
+        const transport = (ov && ov.transport) ? ov.transport : '公務車';
+        const fee = (transport !== '公務車' && ov) ? (ov.fee || 0) : 0;
+        segs.push({ index: i, from: stops[i], to: stops[i+1], transport, fee });
+    }
+    return segs;
 }
 
-function updateRoutePreview() {
-    const preview = document.getElementById('routePreview');
-    const stops = getFullRouteStops();
-    
-    if(stops.length <= 1) {
-        preview.innerHTML = '<span class="route-empty">暫無完整的路線規劃</span>';
-        return;
-    }
-    
-    let html = '';
-    for(let i=0; i<stops.length; i++) {
-        // 地點標籤
-        html += `<div class="route-stop"><div class="route-dot"></div>${shortLocLabel(stops[i])}</div>`;
-        
-        // 插入分段設定
-        if(i < stops.length - 1) {
-            const from = stops[i];
-            const to = stops[i+1];
-            const key = segKey(from, to);
-            const currentOverride = segmentOverrides[key] || { transport: '公務車', fee: 0 };
-            
-            let selectOptions = '';
-            TRANSPORT_OPTIONS.forEach(opt => {
-                selectOptions += `<option value="${opt.value}" ${currentOverride.transport === opt.value ? 'selected' : ''}>${opt.label}</option>`;
-            });
-            
-            const showFee = currentOverride.transport !== '公務車' ? 'block' : 'none';
-            
-            html += `
-            <div class="route-connector">
-                <div class="route-connector-line"></div>
-                <select class="route-seg-select" onchange="updateSegmentTransport('${from}', '${to}', this.value)">
-                    ${selectOptions}
-                </select>
-                <input type="number" class="route-seg-fee" placeholder="費用元" value="${currentOverride.fee || ''}" 
-                       style="display:${showFee};" oninput="updateSegmentFee('${from}', '${to}', this.value)">
-            </div>`;
-        }
-    }
-    preview.innerHTML = html;
-}
+// ══ 多選下拉元件（活動名稱 / 人員 / 制服） ══
+// state: { [key]: Set of selected values }
+const multiselState = { tripType: new Set(), personnel: new Set(), uniform: new Set() };
 
-function updateSegmentTransport(from, to, transport) {
-    const key = segKey(from, to);
-    if(!segmentOverrides[key]) segmentOverrides[key] = { transport: '公務車', fee: 0 };
-    segmentOverrides[key].transport = transport;
-    if(transport === '公務車') segmentOverrides[key].fee = 0;
-    updateRoutePreview();
-}
-
-function updateSegmentFee(from, to, fee) {
-    const key = segKey(from, to);
-    if(!segmentOverrides[key]) segmentOverrides[key] = { transport: '公務車', fee: 0 };
-    segmentOverrides[key].fee = parseInt(fee, 10) || 0;
-}
-
-function addDestFromSelect() {
-    const sel = document.getElementById('destSelect');
-    if(!sel.value) return;
-    routeDestinations.push(sel.value);
-    renderOrderedDestList();
-    updateRoutePreview();
-}
-
-function addCustomDestAsStop() {
-    const inp = document.getElementById('destCustom');
-    if(!inp.value.trim()) return;
-    routeDestinations.push(inp.value.trim());
-    inp.value = '';
-    renderOrderedDestList();
-    updateRoutePreview();
-}
-
-function renderOrderedDestList() {
-    const container = document.getElementById('destOrderedList');
-    container.innerHTML = '';
-    routeDestinations.forEach((dest, idx) => {
-        const item = document.createElement('div');
-        item.className = 'dest-item';
-        item.innerHTML = `
-            <span class="dest-order-input">${idx + 1}</span>
-            <span class="dest-name-input">${shortLocLabel(dest)}</span>
-            <div class="dest-arrows">
-                <button type="button" class="dest-arrow-btn" onclick="moveDest(${idx},-1)" ${idx===0?'disabled':''}>↑</button>
-                <button type="button" class="dest-arrow-btn" onclick="moveDest(${idx},1)" ${idx===routeDestinations.length-1?'disabled':''}>↓</button>
-            </div>
-            <span class="dest-remove" onclick="removeDest(${idx})">×</span>
-        `;
-        container.appendChild(item);
-    });
-}
-
-function moveDest(idx, dir) {
-    const target = idx + dir;
-    if(target < 0 || target >= routeDestinations.length) return;
-    const temp = routeDestinations[idx];
-    routeDestinations[idx] = routeDestinations[target];
-    routeDestinations[target] = temp;
-    renderOrderedDestList();
-    updateRoutePreview();
-}
-
-function removeDest(idx) {
-    routeDestinations.splice(idx, 1);
-    renderOrderedDestList();
-    updateRoutePreview();
-}
-
-function onStartSelectChange() { updateRoutePreview(); }
-function onReturnSelectChange() { updateRoutePreview(); }
-
-// ══ 日曆基礎切換 ══
-function toggleCal(e) {
-    e.stopPropagation();
-    document.getElementById('calPopup').classList.toggle('open');
-}
-
-// ══ 核心邏輯修正：資料打包與產生預覽 ══
-function generate() {
-    const selectedTripTypes = Array.from(multiselState.tripType).join('、');
-    const selectedPersonnel = Array.from(multiselState.personnel).join('、');
-    const selectedUniforms = Array.from(multiselState.uniform).join('、');
-    
-    const dateStr = document.getElementById('dateStr').value;
-    const actTime = document.getElementById('actS_H').value + ':' + document.getElementById('actS_M').value + ' ～ ' + document.getElementById('actE_H').value + ':' + document.getElementById('actE_M').value;
-    const tripTime = document.getElementById('tripS_H').value + ':' + document.getElementById('tripS_M').value + ' ～ ' + document.getElementById('tripE_H').value + ':' + document.getElementById('tripE_M').value;
-
-    // ✨【交通費的核心抓取修正邏輯】
-    const segments = getAllSegments(); 
-    let transportText = "公務車"; 
-    
-    // 篩選出需要非公務車花費的路段
-    const paidSegments = segments.filter(seg => seg.transport !== '公務車');
-    if (paidSegments.length > 0) {
-        // 格式化為後端 Regex 可辨識的：交通工具:金額元 格式
-        transportText = paidSegments.map(seg => {
-            return `${seg.transport}:${seg.fee}元`;
-        }).join('、');
-    }
-
-    let contentResult = "";
-    contentResult += "活動名稱：" + (selectedTripTypes || "未填寫") + "\n";
-    contentResult += "活動日期：" + (dateStr || "未填寫") + "\n";
-    contentResult += "出差時間：" + tripTime + "\n";
-    contentResult += "活動時間：" + actTime + "\n";
-    contentResult += "出差人員：" + (selectedPersonnel || "未填寫") + "\n";
-    contentResult += "出差制服：" + (selectedUniforms || "未填寫") + "\n";
-    contentResult += "總公里數：" + (document.getElementById('totalKm').value || "0") + " KM\n";
-    
-    // 💡 重要：產出符合後端 Regex 規則的「交通方式：」純文字
-    contentResult += "交通方式：" + transportText + "\n"; 
-
-    document.getElementById('output').value = contentResult;
-    
-    return {
-        tripDate: dateStr,
-        tripType: selectedTripTypes,
-        content: contentResult
-    };
-}
-
-// ══ 送出資料到 GAS 雲端後端 ══
-function submitToHistory() {
-    const data = generate(); 
-    if (!data.tripDate) {
-        alert("請先填寫活動日期！");
-        return;
-    }
-    
-    document.getElementById('syncOverlay').style.display = 'flex';
-    
-    const payload = {
-        action: "addHistory",
-        userID: currentUserID,
-        tripDate: data.tripDate,
-        tripType: data.tripType,
-        content: data.content
-    };
-    
-    fetch(GAS_URL, {
-        method: "POST",
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(result => {
-        document.getElementById('syncOverlay').style.display = 'none';
-        if (result.status === "success") {
-            alert("儲存成功！");
-            if (typeof fetchUserData === "function") fetchUserData(); 
-        } else {
-            alert("儲存失敗：" + result.message);
-        }
-    })
-    .catch(err => {
-        document.getElementById('syncOverlay').style.display = 'none';
-        alert("連線錯誤或已模擬送出，請檢查後端連線。");
-        console.log("Payload:", payload);
-    });
-}
-
-// ══ 輔助：其餘空殼 UI 的管理切換 ══
-function toggleBox(id) {
-    const el = document.getElementById(id);
-    el.style.display = el.style.display === 'block' ? 'none' : 'block';
-}
-function formatDateWithDay(input) { /* 自動格式化日期常規邏輯 */ }
-function searchOnGoogleMaps(id) { /* 查地圖邏輯 */ }
-function openGoogleMaps() { /* 多點查地圖邏輯 */ }
-</script>
-
-</body>
-</html>
+const multiselConfig = {
+    tripType:  { display:'tripTypeDisplay',  dropdown:'tripTypeDropdown',  placeholder:'tripTypePlaceholder',  dataKey:'tripTypes',  wrap:'tripTypeWrap' },
+    personnel: { display:'personnelDisplay', dropdown:'personnelDropdown', placeholder:'personnelPlaceholder', dataKey:'personnel', wrap:'personnelWrap' },
+    uniform:   { display:'uniformDisplay',   dropdown:'uniformDropdown',   placeholder:'uniformPlaceh
