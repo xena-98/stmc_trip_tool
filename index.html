@@ -1217,18 +1217,17 @@ function generate(){
     const personnel = Array.from(multiselState.personnel);
     const uniforms = Array.from(multiselState.uniform);
     document.getElementById('output').value=
-        '出差名稱：'+name+'\n'+
-        '出差類別：'+type+'\n'+
+        type+'名稱：'+name+'\n'+
         '活動時間：'+date+' '+actT+'\n'+
-        '出差時間：'+tripT+' (共 '+hours+' 小時'+lunchNote+')\n'+
-        '出差地點：'+destFull+'\n'+
+        type+'時間：'+tripT+' (共 '+hours+' 小時'+lunchNote+')\n'+
+        type+'地點：'+destFull+'\n'+
         '行經路線：'+routeLine+'\n'+
         '交通方式：'+feeNote+'\n'+
         '單程里程：'+oneWayKm.toFixed(1)+' KM\n'+
         '總公里數：'+totalKm.toFixed(1)+' KM\n'+
         '路程統計：單程車程公里數 '+oneWayKm.toFixed(1)+'km，單程車程時間約'+oneWayTime+'分鐘\n'+
-        '出差人員：'+(personnel.length?personnel.join('、'):'（未選擇）')+'\n'+
-        '出差制服：'+(uniforms.length?uniforms.join('、'):'（未選擇）');
+        type+'人員：'+(personnel.length?personnel.join('、'):'（未選擇）')+'\n'+
+        type+'制服：'+(uniforms.length?uniforms.join('、'):'（未選擇）');
 }
 
 async function submitToHistory(){
@@ -1257,3 +1256,4 @@ init();
 </script>
 </body>
 </html>
+
