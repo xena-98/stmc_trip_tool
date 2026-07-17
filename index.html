@@ -1200,7 +1200,7 @@ function generate(){
     let diff = em-sm;
     if(document.getElementById('minusLunch').checked) diff-=60;
     const hours=(diff/60).toFixed(1);
-    const type=hours<=2?"公出":"出差";
+    const type=(oneWayKm>0 && oneWayKm<5)?"公出":(hours<=2?"公出":"出差");
     const lunchNote=document.getElementById('minusLunch').checked?" (已扣除午休 1 小時)":"";
 
     // 交通方式與總費用：彙整所有路段實際使用的交通方式與費用
@@ -1218,6 +1218,7 @@ function generate(){
     const uniforms = Array.from(multiselState.uniform);
     document.getElementById('output').value=
         '出差名稱：'+name+'\n'+
+        '出差類別：'+type+'\n'+
         '活動時間：'+date+' '+actT+'\n'+
         '出差時間：'+tripT+' (共 '+hours+' 小時'+lunchNote+')\n'+
         '出差地點：'+destFull+'\n'+
