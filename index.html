@@ -248,6 +248,11 @@
         .checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; font-weight: 500; margin-top: 6px; cursor: pointer; }
         .checkbox-label input { width: auto; }
         .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+
+        /* ── 出差/公出 類型切換 ── */
+        .type-radio-group { display: flex; gap: 16px; align-items: center; height: 36px; }
+        .type-radio-option { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
+        .type-radio-option input { width: auto; accent-color: var(--black); cursor: pointer; }
     </style>
 </head>
 <body>
@@ -296,16 +301,35 @@
     <div class="card">
         <div class="card-title">活動資訊</div>
 
+        <!-- 紀錄類型：出差 / 公出 -->
+        <div class="grid" style="margin-bottom:12px;">
+            <div>
+                <label>紀錄類型</label>
+                <div class="type-radio-group">
+                    <label class="type-radio-option">
+                        <input type="radio" name="recordType" value="出差" id="typeTrip" checked> 出差
+                    </label>
+                    <label class="type-radio-option">
+                        <input type="radio" name="recordType" value="公出" id="typeGongchu"> 公出
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- 活動名稱 + 活動日期：同一列 -->
         <div class="grid" style="margin-bottom:12px;">
             <div>
-                <label>活動名稱（可複選）</label>
+                <label>活動名稱（可複選，或直接輸入）</label>
                 <!-- 多選下拉 -->
                 <div class="multisel-wrap" id="tripTypeWrap">
                     <div class="multisel-display" id="tripTypeDisplay" onclick="toggleMultisel('tripType')">
                         <span class="sel-placeholder" id="tripTypePlaceholder">請選擇活動名稱…</span>
                     </div>
                     <div class="multisel-dropdown" id="tripTypeDropdown"></div>
+                </div>
+                <!-- 直接輸入（不加入清單，只用這一次） -->
+                <div class="loc-addr-row" style="margin-top:6px;">
+                    <input type="text" id="tripTypeCustomInput" placeholder="或直接輸入本次專用活動名稱（不加入清單，可用、分隔多筆）">
                 </div>
                 <!-- 管理 -->
                 <span class="admin-toggle" onclick="toggleBox('tripTypeAdminBox')">⚙ 管理活動名稱</span>
@@ -1011,6 +1035,80 @@ function getFilterMonth() { return parseInt(document.getElementById('filterMonth
 function toggleShowAll() { showAllMonths=!showAllMonths; document.getElementById('btnShowAll').classList.toggle('active',showAllMonths); renderHistory(); }
 function parseLabelYearMonth(label) { const m=label.match(/(\d{2,3})年(\d{1,2})月/); return m?{year:parseInt(m[1]),month:parseInt(m[2])}:null; }
 
+// ══ 紀錄類型（出差 / 公出）══
+function getRecordType() {
+    const checked = document.querySelector('input[name="recordType"]:checked');
+    return checked ? checked.value : '出差';
+}
+
+// ══ 表單狀態完整快照（供歷史紀錄還原用） ══
+function captureFormState() {
+    return {
+        tripTypeSelected: Array.from(multiselState.tripType),
+        tripTypeCustom: document.getElementById('tripTypeCustomInput').value,
+        recordType: getRecordType(),
+        dateStr: document.getElementById('dateStr').value,
+        actS_H: document.getElementById('actS_H').value, actS_M: document.getElementById('actS_M').value,
+        actE_H: document.getElementById('actE_H').value, actE_M: document.getElementById('actE_M').value,
+        tripS_H: document.getElementById('tripS_H').value, tripS_M: document.getElementById('tripS_M').value,
+        tripE_H: document.getElementById('tripE_H').value, tripE_M: document.getElementById('tripE_M').value,
+        minusLunch: document.getElementById('minusLunch').checked,
+        startSelect: document.getElementById('startSelect').value,
+        startCustom: document.getElementById('startCustom').value,
+        returnSelect: document.getElementById('returnSelect').value,
+        returnCustom: document.getElementById('returnCustom').value,
+        routeStart: routeStart,
+        routeReturn: routeReturn,
+        routeDestinations: routeDestinations.slice(),
+        segmentOverrides: JSON.parse(JSON.stringify(segmentOverrides)),
+        onewayKm: document.getElementById('onewayKm').value,
+        onewayTime: document.getElementById('onewayTime').value,
+        totalKm: document.getElementById('totalKm').value,
+        personnelSelected: Array.from(multiselState.personnel),
+        uniformSelected: Array.from(multiselState.uniform)
+    };
+}
+
+// 將完整表單狀態還原回畫面上（點選歷史紀錄時使用）
+function restoreFormState(state) {
+    if (!state) return;
+    multiselState.tripType = new Set(state.tripTypeSelected || []);
+    document.getElementById('tripTypeCustomInput').value = state.tripTypeCustom || '';
+    renderMultiselDisplay('tripType'); renderMultiselDropdown('tripType');
+
+    const rt = document.querySelector('input[name="recordType"][value="' + (state.recordType || '出差') + '"]');
+    if (rt) rt.checked = true;
+
+    document.getElementById('dateStr').value = state.dateStr || '';
+    document.getElementById('actS_H').value = state.actS_H || '08'; document.getElementById('actS_M').value = state.actS_M || '00';
+    document.getElementById('actE_H').value = state.actE_H || '17'; document.getElementById('actE_M').value = state.actE_M || '00';
+    document.getElementById('tripS_H').value = state.tripS_H || '08'; document.getElementById('tripS_M').value = state.tripS_M || '00';
+    document.getElementById('tripE_H').value = state.tripE_H || '17'; document.getElementById('tripE_M').value = state.tripE_M || '00';
+    document.getElementById('minusLunch').checked = state.minusLunch !== undefined ? state.minusLunch : true;
+
+    routeStart = state.routeStart || '';
+    routeReturn = state.routeReturn || '';
+    routeDestinations = (state.routeDestinations || []).slice();
+    segmentOverrides = state.segmentOverrides ? JSON.parse(JSON.stringify(state.segmentOverrides)) : {};
+    document.getElementById('startCustom').value = state.startCustom || '';
+    document.getElementById('returnCustom').value = state.returnCustom || '';
+
+    refreshAllLocSelectors();
+    if (state.startSelect) document.getElementById('startSelect').value = state.startSelect;
+    if (state.returnSelect) document.getElementById('returnSelect').value = state.returnSelect;
+    renderDestOrderedList();
+    renderRoutePreview();
+
+    document.getElementById('onewayKm').value = state.onewayKm || '';
+    document.getElementById('onewayTime').value = state.onewayTime || '';
+    document.getElementById('totalKm').value = state.totalKm || '';
+
+    multiselState.personnel = new Set(state.personnelSelected || []);
+    multiselState.uniform = new Set(state.uniformSelected || []);
+    renderMultiselDisplay('personnel'); renderMultiselDropdown('personnel');
+    renderMultiselDisplay('uniform'); renderMultiselDropdown('uniform');
+}
+
 async function init() {
     fillTimeDropdowns();
     initCalDropdowns();
@@ -1159,13 +1257,16 @@ function renderLocManageList(){const c=document.getElementById('locManageList');
 async function addLocation(){const name=document.getElementById('newPlaceName').value.trim();const addr=document.getElementById('newPlaceAddr').value.trim();if(name&&addr){currentUserData.locations.push({name,addr});await saveToCloud('locations',currentUserData.locations);refreshAllLocSelectors();document.getElementById('newPlaceName').value='';document.getElementById('newPlaceAddr').value='';}}
 async function deleteLocation(e,index){e.stopPropagation();if(confirm('刪除常用地點？')){const removed=currentUserData.locations[index];const label=locLabel(removed);currentUserData.locations.splice(index,1);const di=routeDestinations.indexOf(label);if(di>=0)routeDestinations.splice(di,1);if(routeStart===label)routeStart='';if(routeReturn===label)routeReturn='';await saveToCloud('locations',currentUserData.locations);refreshAllLocSelectors();renderDestOrderedList();renderRoutePreview();}}
 
-function renderHistory(){const list=document.getElementById('historyList');list.innerHTML='';const fy=getFilterYear(),fm=getFilterMonth();const filtered=showAllMonths?currentUserData.history:currentUserData.history.filter(r=>{const ym=parseLabelYearMonth(r.dateLabel);if(!ym){if(r.rocYear&&r.rocMonth)return parseInt(r.rocYear)===fy&&parseInt(r.rocMonth)===fm;return false;}return ym.year===fy&&ym.month===fm;});document.getElementById('monthCount').textContent=filtered.length;const ind=document.getElementById('filterIndicator');ind.textContent=showAllMonths?'全部'+currentUserData.history.length+'筆':fy+'年'+fm+'月';if(filtered.length===0){list.innerHTML='<div class="history-empty">'+(showAllMonths?'尚無任何紀錄':fy+'年'+fm+'月<br>尚無出差紀錄')+'</div>';return;}filtered.forEach(rec=>{const oi=currentUserData.history.indexOf(rec);const div=document.createElement('div');div.className='history-item';div.onclick=()=>{document.getElementById('output').value=rec.content;};const ym=parseLabelYearMonth(rec.dateLabel);const mt=(showAllMonths&&ym)?'<div class="history-item-month">'+ym.year+'年'+ym.month+'月</div>':'';div.innerHTML=mt+rec.dateLabel+' <button class="btn-del-mini" onclick="deleteHistory(event,'+oi+')">×</button>';list.appendChild(div);});}
+function renderHistory(){const list=document.getElementById('historyList');list.innerHTML='';const fy=getFilterYear(),fm=getFilterMonth();const filtered=showAllMonths?currentUserData.history:currentUserData.history.filter(r=>{const ym=parseLabelYearMonth(r.dateLabel);if(!ym){if(r.rocYear&&r.rocMonth)return parseInt(r.rocYear)===fy&&parseInt(r.rocMonth)===fm;return false;}return ym.year===fy&&ym.month===fm;});document.getElementById('monthCount').textContent=filtered.length;const ind=document.getElementById('filterIndicator');ind.textContent=showAllMonths?'全部'+currentUserData.history.length+'筆':fy+'年'+fm+'月';if(filtered.length===0){list.innerHTML='<div class="history-empty">'+(showAllMonths?'尚無任何紀錄':fy+'年'+fm+'月<br>尚無出差紀錄')+'</div>';return;}filtered.forEach(rec=>{const oi=currentUserData.history.indexOf(rec);const div=document.createElement('div');div.className='history-item';div.onclick=()=>{document.getElementById('output').value=rec.content;restoreFormState(rec.formState);};const ym=parseLabelYearMonth(rec.dateLabel);const mt=(showAllMonths&&ym)?'<div class="history-item-month">'+ym.year+'年'+ym.month+'月</div>':'';div.innerHTML=mt+rec.dateLabel+' <button class="btn-del-mini" onclick="deleteHistory(event,'+oi+')">×</button>';list.appendChild(div);});}
 
 async function deleteHistory(e,index){e.stopPropagation();if(confirm('確定要刪除此筆紀錄？')){currentUserData.history.splice(index,1);await saveToCloud('history',currentUserData.history);renderHistory();}}
 
 
 function generate(){
-    const names = Array.from(multiselState.tripType);
+    const selectedNames = Array.from(multiselState.tripType);
+    const customNameRaw = document.getElementById('tripTypeCustomInput').value.trim();
+    const customNames = customNameRaw ? customNameRaw.split(/[、,，]/).map(s=>s.trim()).filter(Boolean) : [];
+    const names = selectedNames.concat(customNames);
     const name = names.length > 0 ? names.join('、') : '（未選擇活動）';
     const date = document.getElementById('dateStr').value;
     const actT = document.getElementById('actS_H').value+':'+document.getElementById('actS_M').value+'-'+document.getElementById('actE_H').value+':'+document.getElementById('actE_M').value;
@@ -1201,7 +1302,7 @@ function generate(){
     let diff = em-sm;
     if(document.getElementById('minusLunch').checked) diff-=60;
     const hours=(diff/60).toFixed(1);
-    const type=(oneWayKm>0 && oneWayKm<5)?"公出":(hours<=2?"公出":"出差");
+    const type=getRecordType();
     const lunchNote=document.getElementById('minusLunch').checked?" (已扣除午休 1 小時)":"";
 
     // 交通方式與總費用：彙整所有路段實際使用的交通方式與費用
@@ -1235,11 +1336,26 @@ async function submitToHistory(){
     const content=document.getElementById('output').value;
     if(!content||content.includes('預覽'))return alert('請先產生預覽內容');
     const dm=content.match(/(\d{2,3})年(\d{1,2})月(\d{1,2})日/);
-    let dateLabel,rocYear,rocMonth;
-    if(dm){rocYear=parseInt(dm[1]);rocMonth=parseInt(dm[2]);const fd=content.match(/\d{2,3}年\d{1,2}月\d{1,2}日[^\n]*/);dateLabel=fd?fd[0].trim():dm[0];}
-    else{dateLabel='紀錄 '+new Date().toLocaleTimeString();rocYear=null;rocMonth=null;}
-    currentUserData.history.unshift({dateLabel,rocYear,rocMonth,content});
-    if(currentUserData.history.length>30)currentUserData.history.pop();
+    let dateLabel,rocYear,rocMonth,rocDay;
+    if(dm){rocYear=parseInt(dm[1]);rocMonth=parseInt(dm[2]);rocDay=parseInt(dm[3]);const fd=content.match(/\d{2,3}年\d{1,2}月\d{1,2}日[^\n]*/);dateLabel=fd?fd[0].trim():dm[0];}
+    else{dateLabel='紀錄 '+new Date().toLocaleTimeString();rocYear=null;rocMonth=null;rocDay=null;}
+
+    const formState = captureFormState();
+
+    // 同一天是否已有紀錄；若有，詢問是否覆蓋
+    const existingIndex = (rocYear && rocMonth && rocDay)
+        ? currentUserData.history.findIndex(r => r.rocYear === rocYear && r.rocMonth === rocMonth && r.rocDay === rocDay)
+        : -1;
+
+    if (existingIndex !== -1) {
+        const ok = confirm('當天已有紀錄，是否覆蓋？');
+        if (!ok) return;
+        currentUserData.history[existingIndex] = {dateLabel, rocYear, rocMonth, rocDay, content, formState};
+    } else {
+        currentUserData.history.unshift({dateLabel, rocYear, rocMonth, rocDay, content, formState});
+        if(currentUserData.history.length>30)currentUserData.history.pop();
+    }
+
     await saveToCloud('history',currentUserData.history);
     if(rocYear&&rocMonth){document.getElementById('filterYear').value=rocYear;document.getElementById('filterMonth').value=rocMonth;showAllMonths=false;document.getElementById('btnShowAll').classList.remove('active');}
     renderHistory();
@@ -1257,4 +1373,3 @@ init();
 </script>
 </body>
 </html>
-
