@@ -249,10 +249,24 @@
         .checkbox-label input { width: auto; }
         .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
 
-        /* ── 出差/公出 類型切換 ── */
-        .type-radio-group { display: flex; gap: 16px; align-items: center; height: 36px; }
-        .type-radio-option { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text); cursor: pointer; }
-        .type-radio-option input { width: auto; accent-color: var(--black); cursor: pointer; }
+        /* ── 出差/公出 類型切換（分段式切換鈕） ── */
+        .seg-toggle { display: inline-flex; background: var(--gray); border: 1.5px solid var(--gray2); border-radius: 9px; padding: 3px; gap: 3px; height: 36px; width: 100%; }
+        .seg-btn { flex: 1; border: none; background: transparent; color: #888; font-size: 13px; font-weight: 700; border-radius: 6px; padding: 0 16px; cursor: pointer; transition: 0.15s; }
+        .seg-btn:hover { color: var(--text); }
+        .seg-btn.active { background: var(--black); color: var(--green); }
+
+        /* ── 通用確認彈窗（覆蓋 / 保留兩筆 / 取消） ── */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        .modal-box { background: var(--white); border-radius: 12px; padding: 22px 24px; max-width: 340px; width: 90%; box-shadow: 0 12px 32px rgba(0,0,0,0.25); }
+        .modal-msg { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 18px; line-height: 1.6; }
+        .modal-actions { display: flex; flex-direction: column; gap: 8px; }
+        .modal-btn { width: 100%; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700; }
+        .modal-btn.primary { background: var(--black); color: var(--white); }
+        .modal-btn.primary:hover { background: #222; }
+        .modal-btn.secondary { background: var(--gray); color: var(--text); border: 1.5px solid var(--gray2); }
+        .modal-btn.secondary:hover { background: var(--gray2); }
+        .modal-btn.danger { background: #fff; color: #ef4444; border: 1.5px solid #f3c6c6; }
+        .modal-btn.danger:hover { background: #fee; }
     </style>
 </head>
 <body>
@@ -301,18 +315,15 @@
     <div class="card">
         <div class="card-title">活動資訊</div>
 
-        <!-- 紀錄類型：出差 / 公出 -->
+        <!-- 紀錄類型：出差 / 公出（分段式切換鈕） -->
         <div class="grid" style="margin-bottom:12px;">
             <div>
                 <label>紀錄類型</label>
-                <div class="type-radio-group">
-                    <label class="type-radio-option">
-                        <input type="radio" name="recordType" value="出差" id="typeTrip" checked> 出差
-                    </label>
-                    <label class="type-radio-option">
-                        <input type="radio" name="recordType" value="公出" id="typeGongchu"> 公出
-                    </label>
+                <div class="seg-toggle" id="recordTypeToggle">
+                    <button type="button" class="seg-btn active" data-value="出差" onclick="setRecordType('出差')">出差</button>
+                    <button type="button" class="seg-btn" data-value="公出" onclick="setRecordType('公出')">公出</button>
                 </div>
+                <input type="hidden" id="recordTypeValue" value="出差">
             </div>
         </div>
 
@@ -396,14 +407,14 @@
             <div class="loc-field-label-row"><label>出發地</label></div>
             <select id="startSelect" onchange="onStartSelectChange()"></select>
             <div class="loc-addr-row">
-                <input type="text" id="startCustom" placeholder="或貼上 / 輸入自訂地址（自動清除郵遞區號）" oninput="smartFormatDest(this)">
+                <input type="text" id="startCustom" placeholder="或貼上 / 輸入自訂地址（自動清除郵遞區號）">
                 <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('startCustom')">🔍 查地圖</button>
             </div>
         </div>
 
         <!-- 目的地（下拉新增，可多筆） -->
         <div class="loc-field">
-            <div class="loc-field-label-row"><label>目的地（可新增多筆，依序排列行程）</label></div>
+            <div class="loc-field-label-row"><label>目的地（可新增多筆，依序排列行程；完全相同的地點不會重複加入）</label></div>
             <div class="loc-addr-row">
                 <select id="destSelect" style="flex:1;"></select>
                 <button type="button" class="btn-inline-primary" onclick="addDestFromSelect()">＋加入行程</button>
@@ -424,7 +435,7 @@
                 <option value="">（與出發地相同）</option>
             </select>
             <div class="loc-addr-row">
-                <input type="text" id="returnCustom" placeholder="或貼上 / 輸入自訂地址（自動清除郵遞區號）" oninput="smartFormatDest(this)">
+                <input type="text" id="returnCustom" placeholder="或貼上 / 輸入自訂地址（自動清除郵遞區號）">
                 <button type="button" class="btn-inline-secondary" onclick="searchOnGoogleMaps('returnCustom')">🔍 查地圖</button>
             </div>
         </div>
@@ -458,6 +469,18 @@
                 <input type="number" step="0.1" min="0" id="totalKm" placeholder="KM">
             </div>
         </div>
+
+        <div class="grid" style="margin-top:12px;">
+            <div>
+                <label>交通方式（手動覆寫，選填）</label>
+                <input type="text" id="manualTransportMode" placeholder="留空則自動依路段彙整">
+            </div>
+            <div>
+                <label>交通費總額（元，手動覆寫，選填）</label>
+                <input type="number" min="0" id="manualTransportFee" placeholder="留空則自動加總路段費用">
+            </div>
+        </div>
+        <div class="loc-hint">若不想逐段設定路線、只想直接手動調整下方預覽文字，可在此先填好交通方式與總金額，產生預覽時會優先套用這裡的內容，確保金額欄位固定可被 Google 試算表擷取到。</div>
     </div>
 
     <!-- ── 人員與制服 ── -->
@@ -511,17 +534,24 @@
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzVlGu1dK-cCA9wdGwXczjZD_arpcloE0DwlBmbhGJIbaN91bf1cz1YxOOoTtuWctwM/exec";
 
+// ══ 預設資料（新使用者 / 讀取失敗時使用） ══
+const DEFAULT_LOCATIONS = () => [
+    { name: '南方實作基地', addr: '台南市新營區大同路32號' },
+    { name: '勞動部勞動力發展署雲嘉南分署', addr: '台南市官田區二鎮里工業路40號' }
+];
+const DEFAULT_TRIPTYPES = () => ['辦理工作坊課程', '辦理專案展售', '辦理講座課程', '辦理企業參訪', '辦理聯繫會議'];
+const DEFAULT_UNIFORMS  = () => ['灰色', '黑色', '紫色', '綠色'];
+
 let globalUsers = [];
 let currentUserID = "";
-let currentUserData = { history:[], locations:[], tripTypes:[], personnel:[], uniforms:[] };
+let currentUserData = { history: [], locations: [], tripTypes: [], personnel: [], uniforms: [] };
 let showAllMonths = false;
 let calYear, calMonth;
 
-// ══ 路線狀態（出發地 / 目的地（多個，有序）／ 回程地） ══
-// 每個地點存成字串："名稱 (地址)" 或自訂文字
-let routeStart = '';       // 出發地（下拉選的值，或自訂文字蓋過）
-let routeReturn = '';      // 回程地（空字串 = 與出發地相同）
-let routeDestinations = []; // 依使用者點選順序排列的目的地陣列
+// ══ 路線狀態 ══
+// 出發地／回程地不再用獨立變數保存，一律即時讀取「下拉選單 + 自訂輸入框」目前的內容（見 getLocValue），
+// 避免表單元件與狀態變數不同步而導致行經路線漏掉出發地/回程地。
+let routeDestinations = []; // 依使用者點選順序排列的目的地陣列（可含重複，實際加入時會擋掉完全相同者）
 
 // 逐段交通方式覆蓋：key 為「起點|||終點」字串（內容比對，重新排序也不會跑掉）
 // value: { transport: '公車', fee: 50 } — 未覆蓋的路段就沿用整體交通方式
@@ -538,24 +568,8 @@ const TRANSPORT_OPTIONS = [
 ];
 
 function segKey(from, to) { return from + '|||' + to; }
-function shortLocLabel(val) { return val.includes('(') ? val.split('(')[0].trim() : val; }
-
-// 取得目前路線上每一段的交通方式與費用（未個別設定的路段，預設為公務車／0元）
-function getAllSegments() {
-    const stops = getFullRouteStops();
-    const segs = [];
-    for (let i = 0; i < stops.length - 1; i++) {
-        const key = segKey(stops[i], stops[i+1]);
-        const ov = segmentOverrides[key];
-        const transport = (ov && ov.transport) ? ov.transport : '公務車';
-        const fee = (transport !== '公務車' && ov) ? (ov.fee || 0) : 0;
-        segs.push({ index: i, from: stops[i], to: stops[i+1], transport, fee });
-    }
-    return segs;
-}
 
 // ══ 多選下拉元件（活動名稱 / 人員 / 制服） ══
-// state: { [key]: Set of selected values }
 const multiselState = { tripType: new Set(), personnel: new Set(), uniform: new Set() };
 
 const multiselConfig = {
@@ -565,10 +579,62 @@ const multiselConfig = {
 };
 
 // ══════════════════════════════════════════════════
+// 通用確認彈窗（取代單純的 confirm()，可提供 2 個以上的選項）
+// ══════════════════════════════════════════════════
+function showChoiceModal(message, choices) {
+    return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        const box = document.createElement('div');
+        box.className = 'modal-box';
+        const msg = document.createElement('div');
+        msg.className = 'modal-msg';
+        msg.textContent = message;
+        box.appendChild(msg);
+        const actions = document.createElement('div');
+        actions.className = 'modal-actions';
+        choices.forEach(c => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = c.label;
+            btn.className = 'modal-btn ' + (c.style || 'secondary');
+            btn.onclick = () => { document.body.removeChild(overlay); resolve(c.value); };
+            actions.appendChild(btn);
+        });
+        box.appendChild(actions);
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+    });
+}
+
+// ══════════════════════════════════════════════════
+// 紀錄類型（出差 / 公出）— 分段式切換鈕
+// ══════════════════════════════════════════════════
+function getRecordType() {
+    return document.getElementById('recordTypeValue').value || '出差';
+}
+function setRecordType(val) {
+    document.getElementById('recordTypeValue').value = val;
+    document.querySelectorAll('#recordTypeToggle .seg-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.value === val);
+    });
+}
+
+// ══════════════════════════════════════════════════
 // 地點選擇器：出發地 / 目的地（多選有序） / 回程地
 // ══════════════════════════════════════════════════
 
 function locLabel(loc) { return loc.name + ' (' + loc.addr + ')'; }
+
+// 讀取「出發地」或「回程地」目前實際生效的值：自訂輸入框優先，其次才是下拉選單
+// 這是唯一的資料來源，行經路線預覽 / 產生預覽內容 / 開啟地圖都從這裡讀取，
+// 不再另外用 JS 變數保存，避免表單與狀態不同步。
+function getLocValue(selectId, customId) {
+    const customVal = document.getElementById(customId).value.trim();
+    if (customVal) return customVal;
+    const selVal = document.getElementById(selectId).value;
+    return (selVal && selVal !== '__custom__') ? selVal : '';
+}
 
 function populateLocSelect(selectEl, includeEmptyOption, emptyLabel) {
     const prevVal = selectEl.value;
@@ -587,54 +653,28 @@ function refreshAllLocSelectors() {
     populateLocSelect(document.getElementById('returnSelect'), true, '（與出發地相同）');
     populateDestSelect();
     renderLocManageList();
-    // 還原已選值（若仍存在於清單中）
-    const startSel = document.getElementById('startSelect');
-    if (routeStart && routeStart !== '__custom__') {
-        if (Array.from(startSel.options).some(o => o.value === routeStart)) startSel.value = routeStart;
-    }
-    const returnSel = document.getElementById('returnSelect');
-    if (routeReturn && routeReturn !== '__custom__') {
-        if (Array.from(returnSel.options).some(o => o.value === routeReturn)) returnSel.value = routeReturn;
-    }
     renderRoutePreview();
 }
 
 function onStartSelectChange() {
     const v = document.getElementById('startSelect').value;
-    if (v === '__custom__') {
-        // 維持自訂輸入框中的值
-        routeStart = document.getElementById('startCustom').value.trim();
-    } else {
-        routeStart = v;
-        document.getElementById('startCustom').value = '';
-    }
+    if (v !== '__custom__') document.getElementById('startCustom').value = '';
     renderRoutePreview();
 }
 
 function onReturnSelectChange() {
     const v = document.getElementById('returnSelect').value;
-    if (v === '__custom__') {
-        routeReturn = document.getElementById('returnCustom').value.trim();
-    } else {
-        routeReturn = v;
-        document.getElementById('returnCustom').value = '';
-    }
+    if (v !== '__custom__') document.getElementById('returnCustom').value = '';
     renderRoutePreview();
 }
 
 // 自訂輸入框打字時，自動視為目前選擇值（蓋過下拉選單的常用地點選擇）
-function bindCustomInputSync(inputId, selectId, setter) {
+function bindCustomInputSync(inputId, selectId) {
     const input = document.getElementById(inputId);
     input.addEventListener('input', () => {
         smartFormatDest(input);
-        const val = input.value.trim();
-        if (val) {
-            setter(val);
-            const sel = document.getElementById(selectId);
-            if (sel) sel.value = '__custom__';
-        } else {
-            setter('');
-        }
+        const sel = document.getElementById(selectId);
+        if (sel) sel.value = input.value.trim() ? '__custom__' : '';
         renderRoutePreview();
     });
 }
@@ -649,10 +689,16 @@ function populateDestSelect() {
     });
 }
 
+// 完全相同的地點（字串一致）不重複加入同一趟行程
 function addDestFromSelect() {
     const sel = document.getElementById('destSelect');
     const val = sel.value;
     if (!val) return alert('請先選擇一個常用地點');
+    if (routeDestinations.includes(val)) {
+        alert('此地點已在行程清單中，不重複加入。');
+        sel.value = '';
+        return;
+    }
     routeDestinations.push(val);
     sel.value = '';
     renderDestOrderedList();
@@ -664,6 +710,11 @@ function addCustomDestAsStop() {
     const input = document.getElementById('destCustom');
     const val = input.value.trim();
     if (!val) return alert('請先輸入目的地地址');
+    if (routeDestinations.includes(val)) {
+        alert('此地點已在行程清單中，不重複加入。');
+        input.value = '';
+        return;
+    }
     routeDestinations.push(val);
     input.value = '';
     renderDestOrderedList();
@@ -735,16 +786,33 @@ function removeDestByIndex(i) {
 
 // ── 完整路線（出發地 → 目的地們 → 回程地） ──
 function getEffectiveReturn() {
-    return routeReturn && routeReturn.trim() ? routeReturn.trim() : routeStart;
+    const start = getLocValue('startSelect', 'startCustom');
+    const ret = getLocValue('returnSelect', 'returnCustom');
+    return ret || start;
 }
 
 function getFullRouteStops() {
     const stops = [];
-    if (routeStart && routeStart.trim()) stops.push(routeStart.trim());
+    const start = getLocValue('startSelect', 'startCustom');
+    if (start) stops.push(start);
     routeDestinations.forEach(d => { if (d && d.trim()) stops.push(d.trim()); });
     const ret = getEffectiveReturn();
-    if (ret && ret.trim()) stops.push(ret.trim());
+    if (ret) stops.push(ret);
     return stops;
+}
+
+// 取得目前路線上每一段的交通方式與費用（未個別設定的路段，預設為公務車／0元）
+function getAllSegments() {
+    const stops = getFullRouteStops();
+    const segs = [];
+    for (let i = 0; i < stops.length - 1; i++) {
+        const key = segKey(stops[i], stops[i+1]);
+        const ov = segmentOverrides[key];
+        const transport = (ov && ov.transport) ? ov.transport : '公務車';
+        const fee = (transport !== '公務車' && ov) ? (ov.fee || 0) : 0;
+        segs.push({ index: i, from: stops[i], to: stops[i+1], transport, fee });
+    }
+    return segs;
 }
 
 function renderRoutePreview() {
@@ -808,17 +876,15 @@ function openGoogleMaps() {
 }
 
 // 用自訂地址輸入框目前打的關鍵字（地標名稱），開新分頁到 Google Maps 查詢
-// 目的地欄位：顯示「出發地 → 目的地關鍵字」的路線查詢，方便同時確認地址與路程
-// 出發地／回程地欄位：單純搜尋地標位置
-// 使用者可在 Google Maps 複製完整地址，貼回同一個輸入框（會自動清除郵遞區號）
 function searchOnGoogleMaps(inputId) {
     const input = document.getElementById(inputId);
     const query = input.value.trim();
     if (!query) return alert('請先輸入要查詢的地標名稱關鍵字');
 
     if (inputId === 'destCustom') {
-        if (routeStart && routeStart.trim()) {
-            const url = 'https://www.google.com/maps/dir/' + encodeURIComponent(routeStart.trim()) + '/' + encodeURIComponent(query);
+        const start = getLocValue('startSelect', 'startCustom');
+        if (start) {
+            const url = 'https://www.google.com/maps/dir/' + encodeURIComponent(start) + '/' + encodeURIComponent(query);
             window.open(url, '_blank');
         } else {
             alert('尚未設定出發地，將直接搜尋地標位置（設定出發地後可顯示路線查詢）');
@@ -835,7 +901,6 @@ function toggleMultisel(key) {
     const dd = document.getElementById(cfg.dropdown);
     const disp = document.getElementById(cfg.display);
     const isOpen = dd.classList.contains('open');
-    // 關閉所有
     Object.keys(multiselConfig).forEach(k => {
         document.getElementById(multiselConfig[k].dropdown).classList.remove('open');
         document.getElementById(multiselConfig[k].display).classList.remove('open');
@@ -884,7 +949,6 @@ function renderMultiselDisplay(key) {
     const disp = document.getElementById(cfg.display);
     const ph = document.getElementById(cfg.placeholder);
     const selected = Array.from(multiselState[key]);
-    // clear chips
     disp.querySelectorAll('.sel-chip').forEach(el => el.remove());
     if (selected.length === 0) {
         ph.style.display = '';
@@ -1035,12 +1099,6 @@ function getFilterMonth() { return parseInt(document.getElementById('filterMonth
 function toggleShowAll() { showAllMonths=!showAllMonths; document.getElementById('btnShowAll').classList.toggle('active',showAllMonths); renderHistory(); }
 function parseLabelYearMonth(label) { const m=label.match(/(\d{2,3})年(\d{1,2})月/); return m?{year:parseInt(m[1]),month:parseInt(m[2])}:null; }
 
-// ══ 紀錄類型（出差 / 公出）══
-function getRecordType() {
-    const checked = document.querySelector('input[name="recordType"]:checked');
-    return checked ? checked.value : '出差';
-}
-
 // ══ 表單狀態完整快照（供歷史紀錄還原用） ══
 function captureFormState() {
     return {
@@ -1057,13 +1115,13 @@ function captureFormState() {
         startCustom: document.getElementById('startCustom').value,
         returnSelect: document.getElementById('returnSelect').value,
         returnCustom: document.getElementById('returnCustom').value,
-        routeStart: routeStart,
-        routeReturn: routeReturn,
         routeDestinations: routeDestinations.slice(),
         segmentOverrides: JSON.parse(JSON.stringify(segmentOverrides)),
         onewayKm: document.getElementById('onewayKm').value,
         onewayTime: document.getElementById('onewayTime').value,
         totalKm: document.getElementById('totalKm').value,
+        manualTransportMode: document.getElementById('manualTransportMode').value,
+        manualTransportFee: document.getElementById('manualTransportFee').value,
         personnelSelected: Array.from(multiselState.personnel),
         uniformSelected: Array.from(multiselState.uniform)
     };
@@ -1076,8 +1134,7 @@ function restoreFormState(state) {
     document.getElementById('tripTypeCustomInput').value = state.tripTypeCustom || '';
     renderMultiselDisplay('tripType'); renderMultiselDropdown('tripType');
 
-    const rt = document.querySelector('input[name="recordType"][value="' + (state.recordType || '出差') + '"]');
-    if (rt) rt.checked = true;
+    setRecordType(state.recordType || '出差');
 
     document.getElementById('dateStr').value = state.dateStr || '';
     document.getElementById('actS_H').value = state.actS_H || '08'; document.getElementById('actS_M').value = state.actS_M || '00';
@@ -1086,8 +1143,6 @@ function restoreFormState(state) {
     document.getElementById('tripE_H').value = state.tripE_H || '17'; document.getElementById('tripE_M').value = state.tripE_M || '00';
     document.getElementById('minusLunch').checked = state.minusLunch !== undefined ? state.minusLunch : true;
 
-    routeStart = state.routeStart || '';
-    routeReturn = state.routeReturn || '';
     routeDestinations = (state.routeDestinations || []).slice();
     segmentOverrides = state.segmentOverrides ? JSON.parse(JSON.stringify(state.segmentOverrides)) : {};
     document.getElementById('startCustom').value = state.startCustom || '';
@@ -1102,6 +1157,8 @@ function restoreFormState(state) {
     document.getElementById('onewayKm').value = state.onewayKm || '';
     document.getElementById('onewayTime').value = state.onewayTime || '';
     document.getElementById('totalKm').value = state.totalKm || '';
+    document.getElementById('manualTransportMode').value = state.manualTransportMode || '';
+    document.getElementById('manualTransportFee').value = state.manualTransportFee || '';
 
     multiselState.personnel = new Set(state.personnelSelected || []);
     multiselState.uniform = new Set(state.uniformSelected || []);
@@ -1113,14 +1170,12 @@ async function init() {
     fillTimeDropdowns();
     initCalDropdowns();
     initYearFilter();
-    bindCustomInputSync('startCustom', 'startSelect', v => routeStart = v);
-    bindCustomInputSync('returnCustom', 'returnSelect', v => routeReturn = v);
+    bindCustomInputSync('startCustom', 'startSelect');
+    bindCustomInputSync('returnCustom', 'returnSelect');
     await loadAllData();
     document.addEventListener('click', function(e) {
-        // 關日曆
         const popup = document.getElementById('calPopup');
         if (popup.classList.contains('open') && !popup.contains(e.target) && !e.target.classList.contains('btn-cal')) popup.classList.remove('open');
-        // 關多選下拉
         Object.keys(multiselConfig).forEach(key => {
             const cfg = multiselConfig[key];
             const wrap = document.getElementById(cfg.wrap);
@@ -1130,6 +1185,30 @@ async function init() {
             }
         });
     });
+}
+
+// 從雲端整包資料中，取出某位使用者的五種資料類型（找不到就套用預設值）
+function extractUserData(data, uid) {
+    const find = t => data.find(d => d.userID === uid && d.type === t);
+    const hist = find('history'), locs = find('locations'), tts = find('tripTypes'), pers = find('personnel'), unif = find('uniforms');
+    return {
+        history:   hist ? JSON.parse(hist.content) : [],
+        locations: locs ? JSON.parse(locs.content) : DEFAULT_LOCATIONS(),
+        tripTypes: tts  ? JSON.parse(tts.content)  : DEFAULT_TRIPTYPES(),
+        personnel: pers ? JSON.parse(pers.content) : [],
+        uniforms:  unif ? JSON.parse(unif.content) : DEFAULT_UNIFORMS()
+    };
+}
+
+// 切換使用者後，統一刷新畫面上所有相關區塊
+function refreshAfterUserSwitch() {
+    Object.keys(multiselState).forEach(k => multiselState[k].clear());
+    renderUserDropdown(); renderHistory(); updateTitle();
+    renderMultiselDropdown('tripType'); renderMultiselDropdown('personnel'); renderMultiselDropdown('uniform');
+    Object.keys(multiselConfig).forEach(k => renderMultiselDisplay(k));
+    resetRouteState();
+    refreshAllLocSelectors();
+    renderDestOrderedList();
 }
 
 async function loadAllData() {
@@ -1147,43 +1226,31 @@ async function loadAllData() {
         localStorage.setItem('trip_Users',JSON.stringify(globalUsers));
         const lastID = localStorage.getItem('trip_LastUserID');
         currentUserID = globalUsers.find(u=>u.id===lastID) ? lastID : globalUsers[0].id;
-        const hist = data.find(d=>d.userID===currentUserID&&d.type==='history');
-        const locs = data.find(d=>d.userID===currentUserID&&d.type==='locations');
-        const tts  = data.find(d=>d.userID===currentUserID&&d.type==='tripTypes');
-        const pers = data.find(d=>d.userID===currentUserID&&d.type==='personnel');
-        const unif = data.find(d=>d.userID===currentUserID&&d.type==='uniforms');
-        currentUserData.history   = hist ? JSON.parse(hist.content) : [];
-        currentUserData.locations = locs ? JSON.parse(locs.content) : [{name:'南方實作基地',addr:'台南市新營區大同路32號'},{name:'勞動部勞動力發展署雲嘉南分署',addr:'台南市官田區二鎮里工業路40號'}];
-        currentUserData.tripTypes = tts  ? JSON.parse(tts.content)  : ['辦理工作坊課程','辦理專案展售','辦理講座課程','辦理企業參訪','辦理聯繫會議'];
-        currentUserData.personnel = pers ? JSON.parse(pers.content)  : [];
-        currentUserData.uniforms  = unif ? JSON.parse(unif.content)  : ['灰色','黑色','紫色','綠色'];
-        renderUserDropdown(); renderHistory(); updateTitle();
-        renderMultiselDropdown('tripType'); renderMultiselDropdown('personnel'); renderMultiselDropdown('uniform');
-        resetRouteState();
-        refreshAllLocSelectors();
-        renderDestOrderedList();
+        currentUserData = extractUserData(data, currentUserID);
+        refreshAfterUserSwitch();
     } catch(e) {
         console.error("載入失敗",e);
         const su = JSON.parse(localStorage.getItem('trip_Users')||'[]');
-        if(su.length>0){globalUsers=su; const l=localStorage.getItem('trip_LastUserID'); currentUserID=globalUsers.find(u=>u.id===l)?l:globalUsers[0].id; renderUserDropdown(); updateTitle();}
-        currentUserData.uniforms = currentUserData.uniforms.length ? currentUserData.uniforms : ['灰色','黑色','紫色','綠色'];
-        renderMultiselDropdown('tripType'); renderMultiselDropdown('personnel'); renderMultiselDropdown('uniform');
-        resetRouteState();
-        refreshAllLocSelectors();
-        renderDestOrderedList();
+        if(su.length>0){
+            globalUsers=su;
+            const l=localStorage.getItem('trip_LastUserID');
+            currentUserID=globalUsers.find(u=>u.id===l)?l:globalUsers[0].id;
+        }
+        currentUserData.uniforms = (currentUserData.uniforms && currentUserData.uniforms.length) ? currentUserData.uniforms : DEFAULT_UNIFORMS();
+        refreshAfterUserSwitch();
         alert('雲端載入失敗，使用本機備份資料。');
     }
     showOverlay(false);
 }
 
 function resetRouteState() {
-    routeStart = '';
-    routeReturn = '';
     routeDestinations = [];
     segmentOverrides = {};
     const sc = document.getElementById('startCustom'); if (sc) sc.value = '';
     const rc = document.getElementById('returnCustom'); if (rc) rc.value = '';
     const dc = document.getElementById('destCustom'); if (dc) dc.value = '';
+    const ss = document.getElementById('startSelect'); if (ss) ss.value = '';
+    const rs = document.getElementById('returnSelect'); if (rs) rs.value = '';
 }
 
 async function saveToCloud(type, contentObj) {
@@ -1198,7 +1265,24 @@ async function saveToCloud(type, contentObj) {
 function showOverlay(show){document.getElementById('syncOverlay').style.display=show?'flex':'none';}
 function renderUserDropdown(){const d=document.getElementById('userDropdown');d.innerHTML='';globalUsers.forEach(u=>{const o=new Option(u.name,u.id);if(u.id===currentUserID)o.selected=true;d.add(o);});}
 async function switchUser(){currentUserID=document.getElementById('userDropdown').value;localStorage.setItem('trip_LastUserID',currentUserID);await loadAllData();}
-async function addNewUser(){const name=prompt("輸入新成員姓名：");if(!name||!name.trim())return;const newId='user_'+Date.now();globalUsers.push({id:newId,name:name.trim()});localStorage.setItem('trip_Users',JSON.stringify(globalUsers));currentUserID=newId;localStorage.setItem('trip_LastUserID',newId);currentUserData={history:[],locations:[{name:'南方實作基地',addr:'台南市新營區大同路32號'},{name:'勞動部勞動力發展署雲嘉南分署',addr:'台南市官田區二鎮里工業路40號'}],tripTypes:['辦理工作坊課程','辦理專案展售','辦理講座課程','辦理企業參訪','辦理聯繫會議'],personnel:[],uniforms:['灰色','黑色','紫色','綠色']};await saveToCloud('history',[]);await saveToCloud('locations',currentUserData.locations);await saveToCloud('tripTypes',currentUserData.tripTypes);await saveToCloud('uniforms',currentUserData.uniforms);renderUserDropdown();renderHistory();updateTitle();renderMultiselDropdown('tripType');renderMultiselDropdown('personnel');renderMultiselDropdown('uniform');resetRouteState();refreshAllLocSelectors();renderDestOrderedList();alert('已新增成員「'+name.trim()+'」');}
+
+async function addNewUser(){
+    const name=prompt("輸入新成員姓名：");
+    if(!name||!name.trim())return;
+    const newId='user_'+Date.now();
+    globalUsers.push({id:newId,name:name.trim()});
+    localStorage.setItem('trip_Users',JSON.stringify(globalUsers));
+    currentUserID=newId;
+    localStorage.setItem('trip_LastUserID',newId);
+    currentUserData={history:[],locations:DEFAULT_LOCATIONS(),tripTypes:DEFAULT_TRIPTYPES(),personnel:[],uniforms:DEFAULT_UNIFORMS()};
+    await saveToCloud('history',[]);
+    await saveToCloud('locations',currentUserData.locations);
+    await saveToCloud('tripTypes',currentUserData.tripTypes);
+    await saveToCloud('uniforms',currentUserData.uniforms);
+    refreshAfterUserSwitch();
+    alert('已新增成員「'+name.trim()+'」');
+}
+
 async function renameUser(){
     const user=globalUsers.find(u=>u.id===currentUserID);
     if(!user)return;
@@ -1206,7 +1290,6 @@ async function renameUser(){
     if(!name||!name.trim())return;
     user.name=name.trim();
     localStorage.setItem('trip_Users',JSON.stringify(globalUsers));
-    // 重存所有類型以讓雲端 userName 欄位更新
     await saveToCloud('history',currentUserData.history);
     await saveToCloud('locations',currentUserData.locations);
     await saveToCloud('tripTypes',currentUserData.tripTypes||[]);
@@ -1216,6 +1299,7 @@ async function renameUser(){
     updateTitle();
     alert('姓名已更新為「'+user.name+'」');
 }
+
 async function deleteUser(){
     if(globalUsers.length<=1)return alert('至少需要保留一位成員');
     if(!confirm('確定刪除此使用者及其所有資料？'))return;
@@ -1223,31 +1307,14 @@ async function deleteUser(){
     localStorage.setItem('trip_Users',JSON.stringify(globalUsers));
     currentUserID=globalUsers[0].id;
     localStorage.setItem('trip_LastUserID',currentUserID);
-    // 切換到第一位使用者並重新拉取其資料（不依賴舊 currentUserID）
     showOverlay(true);
     try {
         const res=await fetch(GAS_URL+"?t="+Date.now());
         const data=await res.json();
-        const hist=data.find(d=>d.userID===currentUserID&&d.type==='history');
-        const locs=data.find(d=>d.userID===currentUserID&&d.type==='locations');
-        const tts =data.find(d=>d.userID===currentUserID&&d.type==='tripTypes');
-        const pers=data.find(d=>d.userID===currentUserID&&d.type==='personnel');
-        const unif=data.find(d=>d.userID===currentUserID&&d.type==='uniforms');
-        currentUserData.history  =hist?JSON.parse(hist.content):[];
-        currentUserData.locations=locs?JSON.parse(locs.content):[{name:'南方實作基地',addr:'台南市新營區大同路32號'},{name:'勞動部勞動力發展署雲嘉南分署',addr:'台南市官田區二鎮里工業路40號'}];
-        currentUserData.tripTypes=tts ?JSON.parse(tts.content) :['辦理工作坊課程','辦理專案展售','辦理講座課程','辦理企業參訪','辦理聯繫會議'];
-        currentUserData.personnel=pers?JSON.parse(pers.content):[];
-        currentUserData.uniforms =unif?JSON.parse(unif.content):['灰色','黑色','紫色','綠色'];
+        currentUserData = extractUserData(data, currentUserID);
     } catch(e){ console.error(e); }
     showOverlay(false);
-    // 清空所有複選狀態
-    Object.keys(multiselState).forEach(k=>multiselState[k].clear());
-    renderUserDropdown(); renderHistory(); updateTitle();
-    renderMultiselDropdown('tripType'); renderMultiselDropdown('personnel'); renderMultiselDropdown('uniform');
-    Object.keys(multiselConfig).forEach(k=>renderMultiselDisplay(k));
-    resetRouteState();
-    refreshAllLocSelectors();
-    renderDestOrderedList();
+    refreshAfterUserSwitch();
 }
 
 function smartFormatDest(el){let val=el.value.trim();if(!val)return;const gm=/^(.+?)\s+(\d{3,6})([台臺嘉雲高屏宜花東基新桃竹苗彰南投].+)$/.exec(val);if(gm){el.value=gm[1].trim()+' ('+gm[3].trim()+')';return;}if(val.includes('(')&&val.includes(')'))return;['國立','私立','財團法人','行政院','教育部','勞動部'].forEach(w=>{val=val.replaceAll(w,'');});if((val.includes('市')||val.includes('縣'))&&val.length>5){val=val.replace(/^\d{3,6}/,'').trim();const kws=['台南','臺南','嘉義','雲林','台北','臺北','台中','臺中','桃園','新竹','苗栗','彰化','南投','屏東','宜蘭','花蓮','台東','臺東','基隆','新北','高雄'];let si=-1;kws.forEach(k=>{let i=val.indexOf(k);if(i!==-1&&(si===-1||i<si))si=i;});if(si>0){let n=val.substring(0,si).trim();let a=val.substring(si).trim();if(!n.includes('('))el.value=n+' ('+a+')';}else if(si===0){el.value=val;}}}
@@ -1255,7 +1322,24 @@ function smartFormatDest(el){let val=el.value.trim();if(!val)return;const gm=/^(
 function renderLocManageList(){const c=document.getElementById('locManageList');if(!c)return;c.innerHTML='';if(!currentUserData.locations||currentUserData.locations.length===0){c.innerHTML='<div style="font-size:12px;color:#aaa;padding:4px 2px;">尚無常用地點</div>';return;}currentUserData.locations.forEach((loc,i)=>{const div=document.createElement('div');div.className='loc-manage-item';div.innerHTML='<span class="lm-name">'+loc.name+'</span><span class="lm-addr">'+loc.addr+'</span><span class="lm-del" onclick="deleteLocation(event,'+i+')">×</span>';c.appendChild(div);});}
 
 async function addLocation(){const name=document.getElementById('newPlaceName').value.trim();const addr=document.getElementById('newPlaceAddr').value.trim();if(name&&addr){currentUserData.locations.push({name,addr});await saveToCloud('locations',currentUserData.locations);refreshAllLocSelectors();document.getElementById('newPlaceName').value='';document.getElementById('newPlaceAddr').value='';}}
-async function deleteLocation(e,index){e.stopPropagation();if(confirm('刪除常用地點？')){const removed=currentUserData.locations[index];const label=locLabel(removed);currentUserData.locations.splice(index,1);const di=routeDestinations.indexOf(label);if(di>=0)routeDestinations.splice(di,1);if(routeStart===label)routeStart='';if(routeReturn===label)routeReturn='';await saveToCloud('locations',currentUserData.locations);refreshAllLocSelectors();renderDestOrderedList();renderRoutePreview();}}
+
+async function deleteLocation(e,index){
+    e.stopPropagation();
+    if(!confirm('刪除常用地點？'))return;
+    const removed=currentUserData.locations[index];
+    const label=locLabel(removed);
+    currentUserData.locations.splice(index,1);
+    const di=routeDestinations.indexOf(label);
+    if(di>=0)routeDestinations.splice(di,1);
+    // 若出發地/回程地目前選中此地點，清空對應欄位
+    const startSel=document.getElementById('startSelect'), retSel=document.getElementById('returnSelect');
+    if(startSel.value===label){startSel.value='';document.getElementById('startCustom').value='';}
+    if(retSel.value===label){retSel.value='';document.getElementById('returnCustom').value='';}
+    await saveToCloud('locations',currentUserData.locations);
+    refreshAllLocSelectors();
+    renderDestOrderedList();
+    renderRoutePreview();
+}
 
 function renderHistory(){const list=document.getElementById('historyList');list.innerHTML='';const fy=getFilterYear(),fm=getFilterMonth();const filtered=showAllMonths?currentUserData.history:currentUserData.history.filter(r=>{const ym=parseLabelYearMonth(r.dateLabel);if(!ym){if(r.rocYear&&r.rocMonth)return parseInt(r.rocYear)===fy&&parseInt(r.rocMonth)===fm;return false;}return ym.year===fy&&ym.month===fm;});document.getElementById('monthCount').textContent=filtered.length;const ind=document.getElementById('filterIndicator');ind.textContent=showAllMonths?'全部'+currentUserData.history.length+'筆':fy+'年'+fm+'月';if(filtered.length===0){list.innerHTML='<div class="history-empty">'+(showAllMonths?'尚無任何紀錄':fy+'年'+fm+'月<br>尚無出差紀錄')+'</div>';return;}filtered.forEach(rec=>{const oi=currentUserData.history.indexOf(rec);const div=document.createElement('div');div.className='history-item';div.onclick=()=>{document.getElementById('output').value=rec.content;restoreFormState(rec.formState);};const ym=parseLabelYearMonth(rec.dateLabel);const mt=(showAllMonths&&ym)?'<div class="history-item-month">'+ym.year+'年'+ym.month+'月</div>':'';div.innerHTML=mt+rec.dateLabel+' <button class="btn-del-mini" onclick="deleteHistory(event,'+oi+')">×</button>';list.appendChild(div);});}
 
@@ -1272,7 +1356,10 @@ function generate(){
     const actT = document.getElementById('actS_H').value+':'+document.getElementById('actS_M').value+'-'+document.getElementById('actE_H').value+':'+document.getElementById('actE_M').value;
     const tripT = document.getElementById('tripS_H').value+':'+document.getElementById('tripS_M').value+'-'+document.getElementById('tripE_H').value+':'+document.getElementById('tripE_M').value;
 
-    const destFull = routeDestinations.length ? routeDestinations.join('、') : '（未選擇）';
+    // 公出/出差地點：完全相同的地點只列出一次
+    const uniqueDests = [...new Set(routeDestinations)];
+    const destFull = uniqueDests.length ? uniqueDests.join('、') : '（未選擇）';
+
     const stops = getFullRouteStops();
     const segs = getAllSegments();
 
@@ -1305,15 +1392,23 @@ function generate(){
     const type=getRecordType();
     const lunchNote=document.getElementById('minusLunch').checked?" (已扣除午休 1 小時)":"";
 
-    // 交通方式與總費用：彙整所有路段實際使用的交通方式與費用
+    // 交通方式與總費用：優先套用上方「手動覆寫」欄位，確保金額欄位一定存在、方便 Google 試算表擷取
+    // 未手動覆寫時才自動彙整所有路段實際使用的交通方式與費用
+    const manualMode = document.getElementById('manualTransportMode').value.trim();
+    const manualFeeRaw = document.getElementById('manualTransportFee').value;
     const distinctTransports = new Set(segs.map(s => s.transport));
-    const totalFee = segs.reduce((sum, s) => sum + s.fee, 0);
+    const autoTotalFee = segs.reduce((sum, s) => sum + s.fee, 0);
+
     let feeNote;
-    if (distinctTransports.size <= 1) {
+    if (manualMode || manualFeeRaw !== '') {
+        const feeNum = manualFeeRaw !== '' ? (parseInt(manualFeeRaw) || 0) : autoTotalFee;
+        const modeText = manualMode || (distinctTransports.size<=1 ? (segs.length?segs[0].transport:'公務車') : Array.from(distinctTransports).join('、'));
+        feeNote = modeText === '公務車' ? '公務車（不計交通費）' : modeText + '：' + feeNum + ' 元';
+    } else if (distinctTransports.size <= 1) {
         const t = segs.length ? segs[0].transport : '公務車';
-        feeNote = t === '公務車' ? '公務車（不計交通費）' : t + '：' + totalFee + ' 元';
+        feeNote = t === '公務車' ? '公務車（不計交通費）' : t + '：' + autoTotalFee + ' 元';
     } else {
-        feeNote = Array.from(distinctTransports).join('、') + (totalFee > 0 ? '（交通費合計 '+totalFee+' 元）' : '（不計交通費）');
+        feeNote = Array.from(distinctTransports).join('、') + (autoTotalFee > 0 ? '（交通費合計 '+autoTotalFee+' 元）' : '（不計交通費）');
     }
 
     const personnel = Array.from(multiselState.personnel);
@@ -1342,15 +1437,30 @@ async function submitToHistory(){
 
     const formState = captureFormState();
 
-    // 同一天是否已有紀錄；若有，詢問是否覆蓋
+    // 同一天是否已有紀錄；若有，讓使用者選擇「覆蓋」或「保留兩筆」（例如同一天出差兩趟、時間地點不同）
     const existingIndex = (rocYear && rocMonth && rocDay)
         ? currentUserData.history.findIndex(r => r.rocYear === rocYear && r.rocMonth === rocMonth && r.rocDay === rocDay)
         : -1;
 
     if (existingIndex !== -1) {
-        const ok = confirm('當天已有紀錄，是否覆蓋？');
-        if (!ok) return;
-        currentUserData.history[existingIndex] = {dateLabel, rocYear, rocMonth, rocDay, content, formState};
+        const choice = await showChoiceModal(
+            '「' + dateLabel + '」當天已有一筆紀錄，請選擇處理方式：',
+            [
+                { label: '保留兩筆（新增這一筆）', value: 'keep', style: 'primary' },
+                { label: '確定覆蓋原紀錄', value: 'overwrite', style: 'danger' },
+                { label: '取消', value: 'cancel', style: 'secondary' }
+            ]
+        );
+        if (!choice || choice === 'cancel') return;
+        if (choice === 'overwrite') {
+            currentUserData.history[existingIndex] = {dateLabel, rocYear, rocMonth, rocDay, content, formState};
+        } else {
+            const rt = formState.recordType || '出差';
+            const timeMatch = content.match(new RegExp(rt + '時間：(\\d{1,2}:\\d{2})'));
+            const suffix = timeMatch ? '（'+timeMatch[1]+'）' : '（第2筆）';
+            currentUserData.history.unshift({dateLabel: dateLabel + suffix, rocYear, rocMonth, rocDay, content, formState});
+            if(currentUserData.history.length>30)currentUserData.history.pop();
+        }
     } else {
         currentUserData.history.unshift({dateLabel, rocYear, rocMonth, rocDay, content, formState});
         if(currentUserData.history.length>30)currentUserData.history.pop();
